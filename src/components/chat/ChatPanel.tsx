@@ -8,14 +8,15 @@ interface ChatPanelProps {
   messages: ChatMessage[]
   isRunning: boolean
   hasProject: boolean
+  projectName?: string
   onSend: (message: string) => void
   onStop: () => void
 }
 
-export function ChatPanel({ messages, isRunning, hasProject, onSend, onStop }: ChatPanelProps) {
+export function ChatPanel({ messages, isRunning, hasProject, projectName, onSend, onStop }: ChatPanelProps) {
   return (
     <>
-      <ChatMessages messages={messages} isRunning={isRunning} />
+      <ChatMessages messages={messages} isRunning={isRunning} projectName={projectName} />
       <ChatInput onSend={onSend} onStop={onStop} isRunning={isRunning} disabled={!hasProject} />
     </>
   )
