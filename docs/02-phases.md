@@ -1,6 +1,6 @@
 # Claude HQ — Phase Roadmap
 
-## Phase 1: Chat Interface (current)
+## Phase 1: Chat Interface (done)
 
 **Core**: Move the terminal `claude` conversation into a web chat UI.
 
@@ -13,25 +13,31 @@
 - [x] Dark/light theme toggle
 - [x] Korean IME compatibility
 
-## Phase 2: Session Management
+## Phase 2: Session Management (done)
 
 **Core**: Manage multiple sessions and browse conversation history.
 
-- [ ] Sidebar with session list (grouped by project)
-- [ ] Switch between sessions
-- [ ] Delete sessions
+- [x] Sidebar with session list (scoped per project, slide navigation from projects view)
+- [x] Switch between sessions (loads full message history, auto-selects most recent on project change)
+- [x] Delete sessions (with active session cleanup)
 - [ ] Search sessions
-- [ ] Session summaries (first message, last activity, turn count)
+- [x] Session summaries (title, message count, relative time via `SessionSummary` type)
 
-## Phase 3: Agent Visibility
+## Phase 3: Agent Visibility (in progress)
 
 **Core**: See what sub-agents are doing at a glance.
 
 - [ ] Detect Agent tool calls (`tool_use.name === "Agent"`)
-- [ ] Agent cards (name, status, description)
+- [x] Agent cards (name, model, category, source badge) — static catalog from `.claude/agents/` scanning
 - [ ] Parallel agent visualization (concurrent execution)
 - [ ] Tool call timeline (chronological activity)
 - [ ] Agent tree (manager → sub-agent hierarchy)
+
+> **Note**: Static agent catalog is implemented — agents are scanned from project-local
+> (`.claude/agents/*.md`), global user (`~/.claude/agents/*.md`), and built-in definitions.
+> Agents are grouped by category (planning, quality, build, maintenance, exploration) in a
+> toggleable right panel. Runtime agent visibility (detecting live Agent tool calls during
+> chat) is NOT yet implemented.
 
 ## Phase 4: Scheduling & Automation
 
