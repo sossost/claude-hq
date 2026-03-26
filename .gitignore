@@ -1,0 +1,23 @@
+.yarn/*
+!.yarn/patches
+!.yarn/plugins
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+#!.yarn/cache
+.pnp.*
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# dependencies
+node_modules
+
+# misc
+.DS_Store
+*.pem
+.env*
