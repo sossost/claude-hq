@@ -49,15 +49,16 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
           rows={1}
           className="flex-1 resize-none rounded-lg px-4 py-3 text-sm focus:outline-none transition-colors"
           style={{
-            background: 'var(--input-bg)',
+            background: 'var(--input)',
             border: '1px solid var(--input-border)',
-            color: 'var(--text-primary)',
+            color: 'var(--foreground)',
           }}
         />
         {isRunning ? (
           <button
             onClick={onStop}
-            className="shrink-0 rounded-lg bg-red-500 px-4 py-3 text-sm font-medium text-white hover:bg-red-600 transition-colors"
+            className="shrink-0 rounded-lg px-4 py-3 text-sm font-medium transition-colors"
+            style={{ background: 'var(--error)', color: 'var(--error-foreground)' }}
           >
             Stop
           </button>
@@ -67,8 +68,8 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
             disabled={value.trim() === '' || disabled === true}
             className="shrink-0 rounded-lg px-4 py-3 text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
             style={{
-              background: 'var(--btn-primary)',
-              color: 'var(--btn-primary-text)',
+              background: 'var(--primary)',
+              color: 'var(--primary-foreground)',
             }}
           >
             Send

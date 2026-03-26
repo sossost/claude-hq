@@ -6,7 +6,7 @@ interface SystemBubbleProps {
 
 export function SystemBubble({ message }: SystemBubbleProps) {
   return (
-    <div className="text-xs italic" style={{ color: 'var(--text-muted)' }}>
+    <div className="text-xs italic" style={{ color: 'var(--content-muted)' }}>
       {message.content}
     </div>
   )

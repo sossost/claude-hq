@@ -26,7 +26,7 @@ export function ProjectList({
 
   if (isLoading) {
     return (
-      <div className="px-3 py-4 text-xs" style={{ color: 'var(--text-muted)' }}>
+      <div className="px-3 py-4 text-xs" style={{ color: 'var(--content-muted)' }}>
         Loading...
       </div>
     )
@@ -35,13 +35,13 @@ export function ProjectList({
   return (
     <div className="flex flex-col h-full">
       <div className="px-3 pt-3 pb-1 flex items-center justify-between">
-        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>
+        <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--content-muted)' }}>
           Projects
         </span>
         <button
           onClick={() => setIsImportOpen(true)}
           className="text-[10px] font-medium transition-colors"
-          style={{ color: 'var(--text-muted)' }}
+          style={{ color: 'var(--content-muted)' }}
         >
           + Import
         </button>
@@ -49,7 +49,7 @@ export function ProjectList({
 
       <div className="flex-1 overflow-y-auto px-1">
         {projects.length === 0 && (
-          <div className="px-3 py-12 text-center text-xs" style={{ color: 'var(--text-muted)' }}>
+          <div className="px-3 py-12 text-center text-xs" style={{ color: 'var(--content-muted)' }}>
             No projects imported
           </div>
         )}

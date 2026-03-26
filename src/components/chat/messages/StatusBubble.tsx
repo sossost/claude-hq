@@ -9,8 +9,8 @@ export function StatusBubble({ message }: StatusBubbleProps) {
   const durationSec = message.duration != null ? (message.duration / 1000).toFixed(1) : null
 
   return (
-    <div className="flex items-center gap-3 text-xs py-2" style={{ color: 'var(--text-muted)' }}>
-      <span className={`h-1.5 w-1.5 rounded-full ${isDone ? 'bg-green-500' : 'bg-red-500'}`} />
+    <div className="flex items-center gap-3 text-xs py-2" style={{ color: 'var(--content-muted)' }}>
+      <span className="h-1.5 w-1.5 rounded-full" style={{ background: isDone ? 'var(--success)' : 'var(--error)' }} />
       <span>{isDone ? 'Completed' : 'Failed'}</span>
       {durationSec != null && <span>{durationSec}s</span>}
       {message.turns != null && <span>{message.turns} turns</span>}
