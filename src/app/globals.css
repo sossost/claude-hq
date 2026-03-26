@@ -2,17 +2,19 @@
 
 :root {
   /* ── Surface ────────────────────────── */
-  --background: #ffffff;
-  --foreground: #09090b;
-  --surface: #f4f4f5;
-  --surface-hover: #e4e4e7;
+  --background: #fafafa;
+  --foreground: #0a0a0b;
+  --surface: #f0f0f2;
+  --surface-hover: #e6e6e9;
+  --surface-elevated: #ffffff;
 
   /* ── Content ────────────────────────── */
-  --content-secondary: #71717a;
-  --content-muted: #a1a1aa;
+  --content-secondary: #6b6b76;
+  --content-muted: #9b9ba7;
 
   /* ── Border ─────────────────────────── */
-  --border: #e4e4e7;
+  --border: #e8e8ec;
+  --border-subtle: #f0f0f2;
   --ring: #18181b;
 
   /* ── Primary ────────────────────────── */
@@ -20,9 +22,13 @@
   --primary-hover: #09090b;
   --primary-foreground: #fafafa;
 
+  /* ── Accent ─────────────────────────── */
+  --accent: #d4a574;
+  --accent-muted: rgba(212, 165, 116, 0.12);
+
   /* ── Status ─────────────────────────── */
   --success: #10b981;
-  --success-muted: #34d399;
+  --success-muted: rgba(16, 185, 129, 0.15);
   --error: #ef4444;
   --error-hover: #dc2626;
   --error-foreground: #ffffff;
@@ -30,14 +36,15 @@
 
   /* ── Input ──────────────────────────── */
   --input: #ffffff;
-  --input-border: #d4d4d8;
+  --input-border: #e0e0e5;
+  --input-shadow: rgba(0, 0, 0, 0.04);
 
   /* ── Chat ───────────────────────────── */
-  --chat-user: #f4f4f5;
+  --chat-user: #f0f0f2;
   --chat-user-foreground: #18181b;
   --chat-tool: #fafafa;
-  --chat-tool-border: #e4e4e7;
-  --chat-tool-header: #f4f4f5;
+  --chat-tool-border: #e8e8ec;
+  --chat-tool-header: #f4f4f6;
 
   /* ── Overlay ────────────────────────── */
   --overlay: rgba(0, 0, 0, 0.4);
@@ -47,42 +54,49 @@
 
 .dark {
   /* ── Surface ────────────────────────── */
-  --background: #09090b;
-  --foreground: #fafafa;
-  --surface: #151518;
-  --surface-hover: #1f1f23;
+  --background: #0a0a0c;
+  --foreground: #ececee;
+  --surface: #141416;
+  --surface-hover: #1c1c20;
+  --surface-elevated: #1a1a1e;
 
   /* ── Content ────────────────────────── */
-  --content-secondary: #a1a1aa;
-  --content-muted: #52525b;
+  --content-secondary: #a0a0ab;
+  --content-muted: #6b6b76;
 
   /* ── Border ─────────────────────────── */
-  --border: #27272a;
+  --border: #232328;
+  --border-subtle: #1a1a1e;
   --ring: #d4d4d8;
 
   /* ── Primary ────────────────────────── */
-  --primary: #fafafa;
-  --primary-hover: #e4e4e7;
-  --primary-foreground: #09090b;
+  --primary: #ececee;
+  --primary-hover: #d4d4d8;
+  --primary-foreground: #0a0a0c;
+
+  /* ── Accent ─────────────────────────── */
+  --accent: #d4a574;
+  --accent-muted: rgba(212, 165, 116, 0.1);
 
   /* ── Status ─────────────────────────── */
-  --success: #10b981;
-  --success-muted: #34d399;
-  --error: #ef4444;
-  --error-hover: #dc2626;
+  --success: #34d399;
+  --success-muted: rgba(52, 211, 153, 0.15);
+  --error: #f87171;
+  --error-hover: #ef4444;
   --error-foreground: #ffffff;
   --warning: #fbbf24;
 
   /* ── Input ──────────────────────────── */
-  --input: #151518;
-  --input-border: #27272a;
+  --input: #141416;
+  --input-border: #2a2a2f;
+  --input-shadow: rgba(0, 0, 0, 0.2);
 
   /* ── Chat ───────────────────────────── */
-  --chat-user: #1f1f23;
-  --chat-user-foreground: #fafafa;
-  --chat-tool: rgba(21, 21, 24, 0.6);
-  --chat-tool-border: #27272a;
-  --chat-tool-header: #151518;
+  --chat-user: #1c1c20;
+  --chat-user-foreground: #ececee;
+  --chat-tool: rgba(20, 20, 22, 0.6);
+  --chat-tool-border: #232328;
+  --chat-tool-header: #141416;
 
   /* ── Overlay ────────────────────────── */
   --overlay: rgba(0, 0, 0, 0.6);
@@ -95,7 +109,16 @@ body {
   color: var(--foreground);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: background 0.2s, color 0.2s;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
+
+/* ── Scrollbar ──────────────────────────────── */
+
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--content-muted); }
 
 /* ── Markdown Body ───────────────────────────── */
 
@@ -104,13 +127,13 @@ body {
 .markdown-body h3 { font-size: 1.1rem; font-weight: 600; margin: 0.75rem 0 0.5rem; line-height: 1.4; }
 .markdown-body h4 { font-size: 1rem; font-weight: 600; margin: 0.5rem 0 0.25rem; line-height: 1.4; }
 
-.markdown-body p { margin: 0.5rem 0; line-height: 1.7; }
+.markdown-body p { margin: 0.5rem 0; line-height: 1.6; }
 .markdown-body p:first-child { margin-top: 0; }
 .markdown-body p:last-child { margin-bottom: 0; }
 
 .markdown-body ul { list-style: disc; padding-left: 1.5rem; margin: 0.5rem 0; }
 .markdown-body ol { list-style: decimal; padding-left: 1.5rem; margin: 0.5rem 0; }
-.markdown-body li { margin: 0.25rem 0; line-height: 1.7; }
+.markdown-body li { margin: 0.25rem 0; line-height: 1.6; }
 .markdown-body li > ul, .markdown-body li > ol { margin: 0.125rem 0; }
 
 .markdown-body strong { font-weight: 600; }

@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import type { ChatMessage, Project, PersistedSession } from '@/types/events'
+import type { ChatMessage, Project, PersistedSession, SessionSettings } from '@/types/events'
 
 const ASSISTANT_CHUNK_MERGE_WINDOW_MS = 500
 
 interface UseChatOptions {
   project: Project | null
+  settings?: SessionSettings
 }
 
 interface UseChatReturn {
@@ -14,17 +15,21 @@ interface UseChatReturn {
   isRunning: boolean
   sessionId: string | null
   claudeSessionId: string | null
+  activeModel: string | null
+  activePermissionMode: string | null
   send: (prompt: string) => void
   stop: () => void
   clear: () => void
   loadSession: (session: PersistedSession) => void
 }
 
-export function useChat({ project }: UseChatOptions): UseChatReturn {
+export function useChat({ project, settings }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [claudeSessionId, setClaudeSessionId] = useState<string | null>(null)
+  const [activeModel, setActiveModel] = useState<string | null>(null)
+  const [activePermissionMode, setActivePermissionMode] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
 
   const ensureSession = useCallback(async (): Promise<string> => {
@@ -82,6 +87,7 @@ export function useChat({ project }: UseChatOptions): UseChatReturn {
           cwd: project.path,
           claudeSessionId,
           persistSessionId: persistId,
+          settings,
         }),
         signal: abort.signal,
       })
@@ -116,9 +122,15 @@ export function useChat({ project }: UseChatOptions): UseChatReturn {
               continue
             }
 
-            // Extract claudeSessionId from status message
+            // Extract claudeSessionId, model, permissionMode from status message
             if (msg.role === 'status' && msg.sessionId != null) {
               setClaudeSessionId(msg.sessionId)
+              if (typeof msg.model === 'string') {
+                setActiveModel(msg.model)
+              }
+              if (typeof msg.permissionMode === 'string') {
+                setActivePermissionMode(msg.permissionMode)
+              }
             }
 
             // Merge consecutive assistant text chunks
@@ -168,7 +180,7 @@ export function useChat({ project }: UseChatOptions): UseChatReturn {
       setIsRunning(false)
       abortRef.current = null
     }
-  }, [project, claudeSessionId, ensureSession])
+  }, [project, claudeSessionId, ensureSession, settings])
 
   const stop = useCallback(() => {
     abortRef.current?.abort()
@@ -179,6 +191,8 @@ export function useChat({ project }: UseChatOptions): UseChatReturn {
     setMessages([])
     setSessionId(null)
     setClaudeSessionId(null)
+    setActiveModel(null)
+    setActivePermissionMode(null)
   }, [])
 
   const loadSession = useCallback((session: PersistedSession) => {
@@ -187,5 +201,5 @@ export function useChat({ project }: UseChatOptions): UseChatReturn {
     setMessages(session.messages)
   }, [])
 
-  return { messages, isRunning, sessionId, claudeSessionId, send, stop, clear, loadSession }
+  return { messages, isRunning, sessionId, claudeSessionId, activeModel, activePermissionMode, send, stop, clear, loadSession }
 }

@@ -25,7 +25,7 @@ export function ToolBubble({ message }: ToolBubbleProps) {
 
     return (
       <div
-        className="rounded-lg text-xs font-mono overflow-hidden"
+        className="rounded-xl text-xs font-mono overflow-hidden"
         style={{ border: '1px solid var(--chat-tool-border)', background: 'var(--chat-tool)' }}
       >
         <button
@@ -70,7 +70,7 @@ export function ToolBubble({ message }: ToolBubbleProps) {
   // Tool call (invocation)
   return (
     <div
-      className="rounded-lg text-xs font-mono overflow-hidden"
+      className="rounded-xl text-xs font-mono overflow-hidden"
       style={{ border: '1px solid var(--chat-tool-border)', background: 'var(--chat-tool)' }}
     >
       <button
@@ -78,15 +78,19 @@ export function ToolBubble({ message }: ToolBubbleProps) {
         className="flex items-center gap-2 px-3 py-2 w-full text-left"
         style={{ background: 'var(--chat-tool-header)' }}
       >
-        <span
-          className="transition-transform duration-200 text-[10px]"
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
+          className="transition-transform duration-200"
           style={{
             transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
             color: 'var(--content-muted)',
           }}
         >
-          ▶
-        </span>
+          <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         <span className="font-medium" style={{ color: 'var(--warning)' }}>
           {message.toolName}
         </span>

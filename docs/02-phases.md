@@ -40,6 +40,17 @@
 
 > **Note**: Tool call timeline and agent tree hierarchy remain out of scope for now.
 
+## Phase 3.5: Session Settings & Chat Info (done)
+
+**Core**: Control CLI flags per session and surface useful metadata in chat.
+
+- [x] Session settings UI (model, effort, permission mode) — inline dropdowns above chat input
+- [x] CLI flag passthrough (`--model`, `--effort`, `--permission-mode`)
+- [x] Global defaults from CLI config probe (`/api/config`)
+- [x] Settings persistence (localStorage)
+- [x] Status info in chat (duration, turns, cost, model) — inline after completion
+- [x] Design refresh (color system, input area, header icons, scrollbar)
+
 ## Phase 4: Scheduling & Automation
 
 **Core**: Set up and manage recurring tasks from the UI.
@@ -56,6 +67,16 @@
 - [ ] Per-project status dashboard
 - [ ] Cross-project activity feed
 - [ ] Per-project settings (default prompts, permission modes, etc.)
+
+## Phase 6: Customizable Layout
+
+**Core**: Let users freely arrange and resize dashboard panels.
+
+- [ ] Resizable panels (drag borders to adjust width/height)
+- [ ] Reorderable panels (drag to reposition)
+- [ ] Layout persistence (save to localStorage)
+- [ ] Layout presets (e.g., "wide chat", "agent focus", "compact")
+- [ ] Collapsible/pinnable panels
 
 ---
 

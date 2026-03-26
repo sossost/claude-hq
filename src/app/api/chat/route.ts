@@ -2,7 +2,21 @@ import { NextRequest, NextResponse } from 'next/server'
 import { ClaudeSession } from '@/lib/claudeProcess'
 import { appendMessages } from '@/lib/sessionStore'
 import { assertSafePath, PathValidationError } from '@/lib/pathValidator'
-import type { ChatMessage } from '@/types/events'
+import type { ChatMessage, SessionSettings, ModelOption, EffortLevel, PermissionMode } from '@/types/events'
+
+const VALID_MODELS = new Set<ModelOption>(['opus', 'sonnet', 'haiku'])
+const VALID_EFFORTS = new Set<EffortLevel>(['low', 'medium', 'high', 'max'])
+const VALID_PERMISSIONS = new Set<PermissionMode>(['default', 'auto', 'plan'])
+
+function validateSettings(raw: unknown): SessionSettings | undefined {
+  if (typeof raw !== 'object' || raw == null) return undefined
+  const obj = raw as Record<string, unknown>
+  return {
+    model: typeof obj.model === 'string' && VALID_MODELS.has(obj.model as ModelOption) ? obj.model as ModelOption : null,
+    effort: typeof obj.effort === 'string' && VALID_EFFORTS.has(obj.effort as EffortLevel) ? obj.effort as EffortLevel : null,
+    permissionMode: typeof obj.permissionMode === 'string' && VALID_PERMISSIONS.has(obj.permissionMode as PermissionMode) ? obj.permissionMode as PermissionMode : null,
+  }
+}
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
@@ -37,8 +51,11 @@ export async function POST(request: NextRequest) {
     throw err
   }
 
-  const claudeSessionId = body.claudeSessionId as string | undefined
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  const rawSessionId = body.claudeSessionId
+  const claudeSessionId = typeof rawSessionId === 'string' && UUID_RE.test(rawSessionId) ? rawSessionId : undefined
   const persistSessionId = body.persistSessionId as string | undefined
+  const settings = validateSettings(body.settings)
 
   const encoder = new TextEncoder()
   const collectedMessages: ChatMessage[] = []
@@ -80,7 +97,7 @@ export async function POST(request: NextRequest) {
         }
       })
 
-      session.send(prompt, claudeSessionId)
+      session.send(prompt, claudeSessionId, settings)
     },
   })
 

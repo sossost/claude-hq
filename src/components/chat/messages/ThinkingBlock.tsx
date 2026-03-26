@@ -10,7 +10,6 @@ interface ThinkingBlockProps {
 export function ThinkingBlock({ content, isStreaming = false }: ThinkingBlockProps) {
   const [isOpen, setIsOpen] = useState(false)
 
-  // Auto-expand while streaming, auto-collapse when done
   useEffect(() => {
     if (isStreaming) {
       setIsOpen(true)
@@ -23,23 +22,27 @@ export function ThinkingBlock({ content, isStreaming = false }: ThinkingBlockPro
 
   return (
     <div
-      className="rounded-lg mb-3 overflow-hidden text-xs"
-      style={{ border: '1px solid var(--border)' }}
+      className="rounded-xl mb-3 overflow-hidden text-xs"
+      style={{
+        background: 'var(--surface)',
+        border: '1px solid var(--border-subtle)',
+      }}
     >
       <button
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex items-center gap-1.5 w-full px-3 py-2 text-left transition-colors"
-        style={{
-          background: 'var(--surface)',
-          color: 'var(--content-muted)',
-        }}
+        style={{ color: 'var(--content-muted)' }}
       >
-        <span
+        <svg
+          width="10"
+          height="10"
+          viewBox="0 0 10 10"
+          fill="none"
           className="transition-transform duration-200"
           style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
         >
-          ▶
-        </span>
+          <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
         <span>{isStreaming ? 'Thinking...' : 'Thinking'}</span>
       </button>
 
@@ -48,6 +51,7 @@ export function ThinkingBlock({ content, isStreaming = false }: ThinkingBlockPro
           className="px-3 py-2 whitespace-pre-wrap font-mono leading-relaxed"
           style={{
             color: 'var(--content-muted)',
+            borderTop: '1px solid var(--border-subtle)',
             maxHeight: '20rem',
             overflowY: 'auto',
           }}

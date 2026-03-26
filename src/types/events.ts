@@ -109,6 +109,8 @@ interface StatusMessage {
   role: 'status'
   sessionId: string
   status: 'running' | 'done' | 'error'
+  model?: string
+  permissionMode?: string
   duration?: number
   cost?: number
   turns?: number
@@ -186,4 +188,22 @@ export interface AgentTaskKpi {
   active: number
   done: number
   error: number
+}
+
+// ─── Session Settings ─────────────────────────────────
+
+export type ModelOption = 'opus' | 'sonnet' | 'haiku'
+export type EffortLevel = 'low' | 'medium' | 'high' | 'max'
+export type PermissionMode = 'default' | 'auto' | 'plan'
+
+export interface SessionSettings {
+  model: ModelOption | null
+  effort: EffortLevel | null
+  permissionMode: PermissionMode | null
+}
+
+export const DEFAULT_SESSION_SETTINGS: SessionSettings = {
+  model: null,
+  effort: null,
+  permissionMode: null,
 }

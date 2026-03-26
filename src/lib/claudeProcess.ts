@@ -1,6 +1,6 @@
 import { spawn, type ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
-import type { ChatMessage } from '@/types/events'
+import type { ChatMessage, SessionSettings } from '@/types/events'
 import { TOOL_RESULT_NAME } from '@/types/events'
 
 const TOOL_OUTPUT_MAX_LENGTH = 500
@@ -17,6 +17,7 @@ function nextId() {
 export class ClaudeSession extends EventEmitter {
   private proc: ChildProcess | null = null
   private sessionId: string | null = null
+  private model: string | null = null
   private buffer = ''
 
   constructor(
@@ -26,7 +27,7 @@ export class ClaudeSession extends EventEmitter {
     super()
   }
 
-  send(prompt: string, resumeSessionId?: string) {
+  send(prompt: string, resumeSessionId?: string, settings?: SessionSettings) {
     const args = [
       '-p', prompt,
       '--output-format', 'stream-json',
@@ -39,6 +40,16 @@ export class ClaudeSession extends EventEmitter {
 
     if (this.allowedTools.length > 0) {
       args.push('--allowedTools', this.allowedTools.join(','))
+    }
+
+    if (settings?.model != null) {
+      args.push('--model', settings.model)
+    }
+    if (settings?.effort != null) {
+      args.push('--effort', settings.effort)
+    }
+    if (settings?.permissionMode != null) {
+      args.push('--permission-mode', settings.permissionMode)
     }
 
     this.proc = spawn('claude', args, {
@@ -111,10 +122,20 @@ export class ClaudeSession extends EventEmitter {
   private parseEvent(event: Record<string, unknown>): ChatMessage[] {
     const type = event['type'] as string
 
-    // Init event — capture sessionId only, don't emit to UI
+    // Init event — capture sessionId, model, permissionMode and emit to UI
     if (type === 'system' && event['subtype'] === 'init') {
       this.sessionId = event['session_id'] as string
-      return []
+      this.model = event['model'] as string ?? null
+      const permMode = event['permissionMode'] as string | undefined
+      return [{
+        id: nextId(),
+        role: 'status',
+        sessionId: this.sessionId,
+        status: 'running',
+        model: this.model ?? undefined,
+        permissionMode: permMode,
+        timestamp: Date.now(),
+      }]
     }
 
     // Hook events — skip
@@ -212,6 +233,7 @@ export class ClaudeSession extends EventEmitter {
         role: 'status',
         sessionId: this.sessionId,
         status: event['subtype'] === 'success' ? 'done' : 'error',
+        model: this.model ?? undefined,
         duration: event['duration_ms'] as number,
         cost: event['total_cost_usd'] as number,
         turns: event['num_turns'] as number,

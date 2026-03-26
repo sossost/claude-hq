@@ -20,6 +20,14 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
     }
   }, [isRunning])
 
+  // Auto-resize textarea
+  useEffect(() => {
+    const el = textareaRef.current
+    if (el == null) return
+    el.style.height = 'auto'
+    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+  }, [value])
+
   function handleSubmit() {
     const trimmed = value.trim()
     if (trimmed === '' || disabled === true) return
@@ -35,9 +43,18 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
     }
   }
 
+  const canSend = value.trim() !== '' && disabled !== true
+
   return (
-    <div className="p-4" style={{ borderTop: '1px solid var(--border)' }}>
-      <div className="flex gap-2 items-end max-w-3xl mx-auto">
+    <div className="px-4 pb-4 pt-1">
+      <div
+        className="max-w-3xl mx-auto rounded-2xl transition-shadow"
+        style={{
+          background: 'var(--surface-elevated)',
+          border: '1px solid var(--input-border)',
+          boxShadow: '0 1px 6px var(--input-shadow), 0 0 0 0 transparent',
+        }}
+      >
         <textarea
           ref={textareaRef}
           value={value}
@@ -45,36 +62,43 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
           onCompositionStart={() => { composingRef.current = true }}
           onCompositionEnd={() => { composingRef.current = false }}
           onKeyDown={handleKeyDown}
-          placeholder="Send a message..."
+          placeholder="Message Claude..."
           rows={1}
-          className="flex-1 resize-none rounded-lg px-4 py-3 text-sm focus:outline-none transition-colors"
-          style={{
-            background: 'var(--input)',
-            border: '1px solid var(--input-border)',
-            color: 'var(--foreground)',
-          }}
+          className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm focus:outline-none"
+          style={{ color: 'var(--foreground)', maxHeight: '160px' }}
         />
-        {isRunning ? (
-          <button
-            onClick={onStop}
-            className="shrink-0 rounded-lg px-4 py-3 text-sm font-medium transition-colors"
-            style={{ background: 'var(--error)', color: 'var(--error-foreground)' }}
-          >
-            Stop
-          </button>
-        ) : (
-          <button
-            onClick={handleSubmit}
-            disabled={value.trim() === '' || disabled === true}
-            className="shrink-0 rounded-lg px-4 py-3 text-sm font-medium transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
-            style={{
-              background: 'var(--primary)',
-              color: 'var(--primary-foreground)',
-            }}
-          >
-            Send
-          </button>
-        )}
+        <div className="flex items-center justify-between px-3 pb-2">
+          <span className="text-[10px]" style={{ color: 'var(--content-muted)' }}>
+            Shift+Enter for new line
+          </span>
+          {isRunning ? (
+            <button
+              onClick={onStop}
+              className="flex items-center justify-center w-8 h-8 rounded-lg transition-colors"
+              style={{ background: 'var(--error)', color: 'var(--error-foreground)' }}
+              aria-label="Stop"
+            >
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                <rect x="3" y="3" width="8" height="8" rx="1.5" fill="currentColor" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              onClick={handleSubmit}
+              disabled={!canSend}
+              className="flex items-center justify-center w-8 h-8 rounded-lg transition-all disabled:opacity-20 disabled:cursor-not-allowed"
+              style={{
+                background: canSend ? 'var(--foreground)' : 'var(--content-muted)',
+                color: 'var(--background)',
+              }}
+              aria-label="Send"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M8 12V4M8 4L4 8M8 4L12 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )

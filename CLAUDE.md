@@ -71,6 +71,9 @@ src/
 │   │   ├── index.ts              ← Public API (SessionList)
 │   │   ├── SessionList.tsx       ← Session list with back nav, new session button
 │   │   └── SessionItem.tsx       ← Session row with title, message count, relative time
+│   ├── settings/                 ← Session settings module
+│   │   ├── index.ts              ← Public API (SettingsPanel)
+│   │   └── SettingsPanel.tsx     ← Popover with model/effort/permission controls
 │   └── agent/                    ← Agent catalog + task dashboard module
 │       ├── index.ts              ← Public API (AgentPanel)
 │       ├── AgentPanel.tsx        ← Stacks AgentWorkspace (when active) above AgentCatalog (always visible)
@@ -111,8 +114,8 @@ Assistant messages are rendered with rich formatting:
 ## Layout
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  ☰ Claude HQ   project-name   [Running] [D/L] [Agents] [+] │
+┌──────────────────────────────────────────────────────────────────┐
+│  ☰ Claude HQ   project-name   [Running] [model] [D/L] [Agents] [⚙] │
 ├────────────┬─────────────────────────┬──────────────────────┤
 │ PROJECTS   │                         │ AGENTS               │
 │ > project1 │     Chat Messages       │ ┌ Workspace (active) ┐│
@@ -138,13 +141,13 @@ Assistant messages are rendered with rich formatting:
   - Task cards: fade in on spawn, fade out after completion; show agent name, status, and progress
   - Catalog: agents grouped by category (planning, quality, build, maintenance, exploration)
   - Displays project-local agents with "project" badge
-- Header: sidebar toggle, project name, running indicator, theme toggle, agent panel toggle, new session
+- Header: sidebar toggle, project name, running indicator, model badge, theme toggle, agent panel toggle, settings popover
 
 ## Key Data Flow
 
 ### Chat
-1. User sends message → `POST /api/chat` with `{ prompt, cwd, claudeSessionId }`
-2. Server validates path (`assertSafePath`) and spawns `claude -p` child process
+1. User sends message → `POST /api/chat` with `{ prompt, cwd, claudeSessionId, settings }`
+2. Server validates path (`assertSafePath`) and spawns `claude -p` child process with settings flags (`--model`, `--effort`, `--permission-mode`)
 3. Each NDJSON line is parsed into a `ChatMessage` and sent via SSE
    - `text` blocks → `AssistantMessage.content`
    - `thinking` blocks → `AssistantMessage.thinking` (optional field)
@@ -233,6 +236,7 @@ All colors are managed via semantic CSS variables in `globals.css`.
 | Thinking display | Collapsible, default collapsed | Non-intrusive — auto-expands during streaming, collapses on completion |
 | Tool display | Collapsible, default collapsed | Keeps chat flow clean — tool name visible, details on demand |
 | Session auto-select | `activeSessionId` + `userClearedRef` guard | Prevents stale session loading on project switch while respecting explicit clears |
+| Session settings | CLI flags (`--model`, `--effort`, `--permission-mode`) | Per-invocation flags — only affects this dashboard's requests, not global CLI config |
 
 ## Scripts
 

@@ -7,11 +7,13 @@ import { useProjects } from '@/lib/useProjects'
 import { useSessions } from '@/lib/useSessions'
 import { useAgents } from '@/lib/useAgents'
 import { useAgentTasks } from '@/lib/useAgentTasks'
+import { useClaudeConfig } from '@/lib/useClaudeConfig'
 import { ChatPanel } from '@/components/chat'
 import { ProjectList } from '@/components/project'
 import { SessionList } from '@/components/session'
 import { AgentPanel } from '@/components/agent'
-import type { Project } from '@/types/events'
+import type { Project, SessionSettings } from '@/types/events'
+import { DEFAULT_SESSION_SETTINGS } from '@/types/events'
 
 type SidebarView = 'projects' | 'sessions'
 
@@ -19,12 +21,29 @@ export default function Dashboard() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(true)
+  const [sessionSettings, setSessionSettings] = useState<SessionSettings>(() => {
+    if (typeof window === 'undefined') return DEFAULT_SESSION_SETTINGS
+    try {
+      const saved = localStorage.getItem('sessionSettings')
+      if (saved != null) return JSON.parse(saved) as SessionSettings
+    } catch {
+      // Parse failure — use defaults
+    }
+    return DEFAULT_SESSION_SETTINGS
+  })
   const [sidebarView, setSidebarView] = useState<SidebarView>('projects')
+  const handleSettingsChange = useCallback((next: SessionSettings) => {
+    setSessionSettings(next)
+    localStorage.setItem('sessionSettings', JSON.stringify(next))
+  }, [])
+
   const { projects, isLoading: projectsLoading, importProject, removeProject } = useProjects()
-  const { messages, isRunning, send, stop, clear, loadSession } = useChat({
+  const { messages, isRunning, activeModel, activePermissionMode, send, stop, clear, loadSession } = useChat({
     project: selectedProject,
+    settings: sessionSettings,
   })
   const { toggle, theme } = useTheme()
+  const claudeDefaults = useClaudeConfig()
   const { agents, isLoading: agentsLoading } = useAgents({ projectPath: selectedProject?.path ?? null })
   const { tasks: agentTasks, kpi: agentKpi } = useAgentTasks(messages, isRunning)
   const {
@@ -134,13 +153,13 @@ export default function Dashboard() {
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
       <header
-        className="px-4 py-3 flex items-center justify-between shrink-0"
+        className="px-4 h-12 flex items-center justify-between shrink-0"
         style={{ borderBottom: '1px solid var(--border)' }}
       >
         <div className="flex items-center gap-3">
           <button
             onClick={() => setIsSidebarOpen((prev) => !prev)}
-            className="p-1 rounded-md transition-colors"
+            className="p-1.5 rounded-lg transition-colors hover:opacity-80"
             style={{ color: 'var(--content-muted)' }}
             aria-label="Toggle sidebar"
           >
@@ -148,48 +167,62 @@ export default function Dashboard() {
               <path d="M2 4h12M2 8h12M2 12h12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
             </svg>
           </button>
-          <h1 className="text-sm font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
+          <span className="text-sm font-semibold tracking-tight" style={{ color: 'var(--foreground)' }}>
             Claude HQ
-          </h1>
+          </span>
           {selectedProject != null && (
-            <span className="text-xs truncate max-w-[200px]" style={{ color: 'var(--content-muted)' }}>
-              {selectedProject.name}
-            </span>
+            <>
+              <span style={{ color: 'var(--border)' }}>/</span>
+              <span className="text-sm truncate max-w-[200px]" style={{ color: 'var(--content-secondary)' }}>
+                {selectedProject.name}
+              </span>
+            </>
           )}
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1">
           {isRunning && (
-            <span className="inline-flex items-center gap-1.5 text-xs" style={{ color: 'var(--success)' }}>
+            <span
+              className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full mr-1"
+              style={{ color: 'var(--success)', background: 'var(--success-muted)' }}
+            >
               <span className="relative flex h-1.5 w-1.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: 'var(--success-muted)' }} />
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" style={{ background: 'var(--success)' }} />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full" style={{ background: 'var(--success)' }} />
               </span>
               Running
             </span>
           )}
+          {/* Theme toggle */}
           <button
             onClick={toggle}
-            className="text-xs transition-colors"
+            className="p-2 rounded-lg transition-colors hover:opacity-80"
             style={{ color: 'var(--content-muted)' }}
             aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
           >
-            {theme === 'dark' ? 'Light' : 'Dark'}
+            {theme === 'dark' ? (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <circle cx="8" cy="8" r="3" stroke="currentColor" strokeWidth="1.5" />
+                <path d="M8 2v1M8 13v1M2 8h1M13 8h1M3.75 3.75l.75.75M11.5 11.5l.75.75M12.25 3.75l-.75.75M4.5 11.5l-.75.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+              </svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <path d="M13.5 8.5a5.5 5.5 0 0 1-6-6 5.5 5.5 0 1 0 6 6Z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round" />
+              </svg>
+            )}
           </button>
+          {/* Agent panel toggle */}
           <button
             onClick={() => setIsAgentPanelOpen((prev) => !prev)}
-            className="text-xs transition-colors"
+            className="p-2 rounded-lg transition-colors hover:opacity-80"
             style={{ color: isAgentPanelOpen ? 'var(--foreground)' : 'var(--content-muted)' }}
             aria-label="Toggle agent panel"
           >
-            Agents
-          </button>
-          <button
-            onClick={handleNewSession}
-            className="text-xs transition-colors"
-            style={{ color: 'var(--content-muted)' }}
-            aria-label="Start a new chat session"
-          >
-            New Session
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+              <rect x="1.5" y="2.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+              <rect x="9.5" y="2.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+              <rect x="1.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+              <rect x="9.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+            </svg>
           </button>
         </div>
       </header>
@@ -199,8 +232,8 @@ export default function Dashboard() {
           <aside
             className="w-60 shrink-0 overflow-hidden"
             style={{
-              borderRight: '1px solid var(--border)',
               background: 'var(--surface)',
+              borderRight: '1px solid var(--border-subtle)',
             }}
           >
             <div
@@ -243,6 +276,11 @@ export default function Dashboard() {
             isRunning={isRunning}
             hasProject={hasProject}
             projectName={selectedProject?.name}
+            settings={sessionSettings}
+            activeModel={activeModel}
+            activePermissionMode={activePermissionMode}
+            claudeDefaults={claudeDefaults}
+            onSettingsChange={handleSettingsChange}
             onSend={send}
             onStop={stop}
           />
@@ -255,7 +293,7 @@ export default function Dashboard() {
               width: '40%',
               minWidth: '20rem',
               maxWidth: '36rem',
-              borderLeft: '1px solid var(--border)',
+              borderLeft: '1px solid var(--border-subtle)',
               background: 'var(--surface)',
             }}
           >
