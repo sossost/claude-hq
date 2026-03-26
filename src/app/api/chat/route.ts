@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { ClaudeSession } from '@/lib/claudeProcess'
 import { appendMessages } from '@/lib/sessionStore'
+import { assertSafePath, PathValidationError } from '@/lib/pathValidator'
 import type { ChatMessage } from '@/types/events'
 
 export const dynamic = 'force-dynamic'
@@ -15,14 +16,29 @@ export const maxDuration = 300
  */
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const prompt = body.prompt as string
-  const cwd = (body.cwd as string) ?? process.cwd()
-  const claudeSessionId = body.claudeSessionId as string | undefined
-  const persistSessionId = body.persistSessionId as string | undefined
 
-  if (prompt == null || prompt.trim() === '') {
+  const prompt: unknown = body.prompt
+  if (typeof prompt !== 'string' || prompt.trim() === '') {
     return NextResponse.json({ error: 'prompt is required' }, { status: 400 })
   }
+
+  const rawCwd: unknown = body.cwd
+  if (typeof rawCwd !== 'string' || rawCwd === '') {
+    return NextResponse.json({ error: 'cwd is required' }, { status: 400 })
+  }
+
+  let cwd: string
+  try {
+    cwd = assertSafePath(rawCwd)
+  } catch (err) {
+    if (err instanceof PathValidationError) {
+      return NextResponse.json({ error: err.message }, { status: 400 })
+    }
+    throw err
+  }
+
+  const claudeSessionId = body.claudeSessionId as string | undefined
+  const persistSessionId = body.persistSessionId as string | undefined
 
   const encoder = new TextEncoder()
   const collectedMessages: ChatMessage[] = []

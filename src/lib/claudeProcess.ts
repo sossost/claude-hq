@@ -2,6 +2,8 @@ import { spawn, type ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
 import type { ChatMessage } from '@/types/events'
 
+const TOOL_OUTPUT_MAX_LENGTH = 500
+
 let counter = 0
 function nextId() {
   return `msg-${Date.now()}-${++counter}`
@@ -172,7 +174,9 @@ export class ClaudeSession extends EventEmitter {
       for (const block of content) {
         if (block['type'] === 'tool_result') {
           const stdout = toolResult?.['stdout'] as string ?? block['content'] as string ?? ''
-          const truncated = stdout.length > 500 ? stdout.slice(0, 500) + '...' : stdout
+          const truncated = stdout.length > TOOL_OUTPUT_MAX_LENGTH
+            ? stdout.slice(0, TOOL_OUTPUT_MAX_LENGTH) + '...'
+            : stdout
           results.push({
             id: nextId(),
             role: 'tool',

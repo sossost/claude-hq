@@ -3,6 +3,8 @@
 import { useState, useCallback, useRef } from 'react'
 import type { ChatMessage, Project, PersistedSession } from '@/types/events'
 
+const ASSISTANT_CHUNK_MERGE_WINDOW_MS = 500
+
 interface UseChatOptions {
   project: Project | null
 }
@@ -32,7 +34,7 @@ export function useChat({ project }: UseChatOptions): UseChatReturn {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        projectPath: project?.path ?? process.cwd(),
+        projectPath: project?.path ?? '',
         projectName: project?.name ?? 'default',
       }),
     })
@@ -126,7 +128,7 @@ export function useChat({ project }: UseChatOptions): UseChatReturn {
                 msg.role === 'assistant' &&
                 last != null &&
                 last.role === 'assistant' &&
-                Date.now() - last.timestamp < 500
+                Date.now() - last.timestamp < ASSISTANT_CHUNK_MERGE_WINDOW_MS
               ) {
                 return [
                   ...prev.slice(0, -1),

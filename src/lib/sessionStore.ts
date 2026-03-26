@@ -23,14 +23,11 @@ export async function saveSession(session: PersistedSession): Promise<void> {
   const sessions = await readAllSessions()
   const idx = sessions.findIndex((s) => s.id === session.id)
 
-  if (idx >= 0) {
-    sessions[idx] = session
-  } else {
-    sessions.push(session)
-  }
+  const next = idx >= 0
+    ? sessions.map((s, i) => i === idx ? session : s)
+    : [...sessions, session]
 
-  // Trim old sessions
-  const trimmed = sessions
+  const trimmed = [...next]
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, MAX_SESSIONS)
 
@@ -53,14 +50,15 @@ export async function appendMessages(
 
   if (session == null) return
 
-  session.messages = [...session.messages, ...messages]
-  session.updatedAt = Date.now()
-
-  if (claudeSessionId != null) {
-    session.claudeSessionId = claudeSessionId
+  const updated: PersistedSession = {
+    ...session,
+    messages: [...session.messages, ...messages],
+    updatedAt: Date.now(),
+    claudeSessionId: claudeSessionId ?? session.claudeSessionId,
   }
 
-  await writeAllSessions(sessions)
+  const next = sessions.map((s) => s.id === sessionId ? updated : s)
+  await writeAllSessions(next)
 }
 
 // ─── File I/O ──────────────────────────────────────────
