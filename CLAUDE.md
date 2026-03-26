@@ -51,12 +51,15 @@ src/
 │   │   ├── ChatPanel.tsx         ← Composes Messages + Input
 │   │   ├── ChatMessages.tsx      ← Message list + auto-scroll
 │   │   ├── ChatInput.tsx         ← Input with IME composition handling
-│   │   ├── ChatEmptyState.tsx    ← Empty state placeholder
+│   │   ├── ChatEmptyState.tsx    ← Empty state with project name + usage hint
 │   │   ├── RunningIndicator.tsx  ← Running status dot
 │   │   └── messages/             ← Per-type bubble components
 │   │       ├── UserBubble.tsx
-│   │       ├── AssistantBubble.tsx
-│   │       ├── ToolBubble.tsx
+│   │       ├── AssistantBubble.tsx ← Markdown + ThinkingBlock integration
+│   │       ├── ToolBubble.tsx     ← Collapsible tool calls (click to expand)
+│   │       ├── MarkdownRenderer.tsx ← react-markdown wrapper with custom renderers
+│   │       ├── CodeBlock.tsx      ← Shiki syntax highlighting + copy button
+│   │       ├── ThinkingBlock.tsx  ← Collapsible thinking display
 │   │       ├── StatusBubble.tsx
 │   │       └── SystemBubble.tsx
 │   ├── project/                  ← Project selector module
@@ -93,6 +96,17 @@ src/
 ```
 
 > `src/components/chat/messages/safeContent.ts` — Defensive content rendering utility (safe extraction of text from unknown message shapes)
+
+## Chat Rendering
+
+Assistant messages are rendered with rich formatting:
+
+- **Markdown**: `react-markdown` + `remark-gfm` — headings, bold/italic, lists, links, tables, blockquotes, code blocks
+- **Syntax highlighting**: `Shiki` with singleton highlighter — dual theme (github-light / github-dark), auto-switches with app theme via shared `useSyncExternalStore` observer
+- **Code blocks**: language label, hover copy button, DOMPurify sanitization on Shiki output, max-height with scroll
+- **Thinking blocks**: collapsible (default collapsed), auto-expands while streaming, auto-collapses on completion
+- **Tool calls**: collapsible (default collapsed), click header to expand input/output, error state with red dot indicator
+- **Empty state**: shows project name + "Ask anything about this project." + "Enter to send"
 
 ## Layout
 
@@ -132,17 +146,21 @@ src/
 1. User sends message → `POST /api/chat` with `{ prompt, cwd, claudeSessionId }`
 2. Server validates path (`assertSafePath`) and spawns `claude -p` child process
 3. Each NDJSON line is parsed into a `ChatMessage` and sent via SSE
-4. Client receives SSE events and appends to message list
-5. On completion, messages are persisted to `~/.claude/dashboard/sessions.json`
-6. Next message sends `claudeSessionId` for `--resume` continuity
+   - `text` blocks → `AssistantMessage.content`
+   - `thinking` blocks → `AssistantMessage.thinking` (optional field)
+   - `tool_use` blocks → `ToolMessage` with toolName and input
+4. Client receives SSE events, merges consecutive assistant chunks (500ms window, includes thinking)
+5. `AssistantBubble` renders content via `MarkdownRenderer` → `react-markdown` → custom `CodeBlock` (Shiki)
+6. On completion, messages are persisted to `~/.claude/dashboard/sessions.json`
+7. Next message sends `claudeSessionId` for `--resume` continuity
 
 ### Session Management
-1. Sessions are scoped per project — switching projects filters the session list
+1. Sessions are scoped per project — switching projects clears stale sessions immediately, then fetches
 2. `useSessions` hook fetches summaries from `/api/sessions` and filters by `projectPath`
 3. Selecting a session loads its full messages via `selectSession(id)` → `loadSession()`
 4. Creating a new session clears chat state and resets `activeSessionId`
 5. After chat completes, session list is auto-refreshed (title may have been updated)
-6. Most recent session is auto-selected when switching projects
+6. Most recent session is auto-selected when switching projects (guarded by `activeSessionId` + `userClearedRef` to avoid stale loads and respect explicit "New Session" clicks)
 
 ### Agent Catalog
 1. Dashboard mounts `useAgents({ projectPath })` — fetches on project change
@@ -209,6 +227,12 @@ All colors are managed via semantic CSS variables in `globals.css`.
 | Agent panel layout | Stacked (workspace on top when active, catalog always below) | No tabs needed — workspace appears only when tasks exist; catalog is always accessible |
 | Import dialog | Portal-based (`createPortal` to `document.body`) | Avoids z-index/overflow issues from sidebar containment |
 | Session scoping | Filter by `projectPath` client-side | Single sessions API, no per-project endpoints — keeps API surface minimal |
+| Markdown rendering | `react-markdown` + `remark-gfm` | React-native components, custom renderers for code blocks and links |
+| Syntax highlighting | `Shiki` singleton + DOMPurify | VS Code-grade accuracy, dual theme (github-light/dark), sanitized output |
+| Theme observation | Shared `useSyncExternalStore` | Single MutationObserver for all CodeBlock instances instead of N observers |
+| Thinking display | Collapsible, default collapsed | Non-intrusive — auto-expands during streaming, collapses on completion |
+| Tool display | Collapsible, default collapsed | Keeps chat flow clean — tool name visible, details on demand |
+| Session auto-select | `activeSessionId` + `userClearedRef` guard | Prevents stale session loading on project switch while respecting explicit clears |
 
 ## Scripts
 

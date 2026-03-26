@@ -12,6 +12,11 @@
 - [x] Server-side session persistence (survives page refresh)
 - [x] Dark/light theme toggle
 - [x] Korean IME compatibility
+- [x] Markdown rendering (react-markdown + remark-gfm)
+- [x] Code syntax highlighting (Shiki, dual theme, copy button)
+- [x] Thinking block display (collapsible, auto-expand while streaming)
+- [x] Tool result collapsible (default collapsed, click to expand)
+- [x] Empty state with project name and usage hint
 
 ## Phase 2: Session Management (done)
 
@@ -33,11 +38,7 @@
 - [ ] Tool call timeline (chronological activity)
 - [ ] Agent tree (manager → sub-agent hierarchy)
 
-> **Note**: Static agent catalog and runtime task dashboard are both implemented. The catalog
-> scans project-local (`.claude/agents/*.md`), global user (`~/.claude/agents/*.md`), and
-> built-in agent definitions, grouped by category in a toggleable right panel. The Agent Task
-> Dashboard derives live `AgentTask[]` from the SSE stream — cards fade in on spawn and fade
-> out after completion. Tool call timeline and agent tree hierarchy remain out of scope for now.
+> **Note**: Tool call timeline and agent tree hierarchy remain out of scope for now.
 
 ## Phase 4: Scheduling & Automation
 
