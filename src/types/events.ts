@@ -144,3 +144,18 @@ export interface SessionSummary {
   createdAt: number
   updatedAt: number
 }
+
+// ─── Agent Definition ─────────────────────────────────
+
+export type AgentSource = 'project' | 'user' | 'built-in'
+export type AgentModel = string
+export type AgentCategory = 'planning' | 'quality' | 'build' | 'maintenance' | 'exploration'
+
+export interface AgentDefinition {
+  name: string
+  description: string
+  tools: string[]
+  model: AgentModel
+  source: AgentSource
+  category: AgentCategory
+}

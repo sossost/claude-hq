@@ -5,9 +5,11 @@ import { useChat } from '@/lib/useChat'
 import { useTheme } from '@/lib/useTheme'
 import { useProjects } from '@/lib/useProjects'
 import { useSessions } from '@/lib/useSessions'
+import { useAgents } from '@/lib/useAgents'
 import { ChatPanel } from '@/components/chat'
 import { ProjectList } from '@/components/project'
 import { SessionList } from '@/components/session'
+import { AgentPanel } from '@/components/agent'
 import type { Project } from '@/types/events'
 
 type SidebarView = 'projects' | 'sessions'
@@ -15,12 +17,14 @@ type SidebarView = 'projects' | 'sessions'
 export default function Dashboard() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(true)
   const [sidebarView, setSidebarView] = useState<SidebarView>('projects')
   const { projects, isLoading: projectsLoading, importProject, removeProject } = useProjects()
   const { messages, isRunning, send, stop, clear, loadSession } = useChat({
     project: selectedProject,
   })
   const { toggle, theme } = useTheme()
+  const { agents, isLoading: agentsLoading } = useAgents({ projectPath: selectedProject?.path ?? null })
   const {
     sessions,
     activeSessionId,
@@ -167,6 +171,14 @@ export default function Dashboard() {
             {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
           <button
+            onClick={() => setIsAgentPanelOpen((prev) => !prev)}
+            className="text-xs transition-colors"
+            style={{ color: isAgentPanelOpen ? 'var(--foreground)' : 'var(--content-muted)' }}
+            aria-label="Toggle agent panel"
+          >
+            Agents
+          </button>
+          <button
             onClick={handleNewSession}
             className="text-xs transition-colors"
             style={{ color: 'var(--content-muted)' }}
@@ -229,6 +241,21 @@ export default function Dashboard() {
             onStop={stop}
           />
         </main>
+
+        {isAgentPanelOpen && (
+          <aside
+            className="shrink-0"
+            style={{
+              width: '40%',
+              minWidth: '20rem',
+              maxWidth: '36rem',
+              borderLeft: '1px solid var(--border)',
+              background: 'var(--surface)',
+            }}
+          >
+            <AgentPanel agents={agents} isLoading={agentsLoading} />
+          </aside>
+        )}
       </div>
     </div>
   )
