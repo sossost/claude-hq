@@ -45,9 +45,10 @@ export function useSessions({ projectPath }: UseSessionsOptions): UseSessionsRet
     }
   }, [projectPath])
 
-  // Refetch when project changes
+  // Refetch when project changes — clear stale sessions immediately
   useEffect(() => {
     setActiveSessionId(null)
+    setSessions([])
     fetchSessions()
   }, [fetchSessions])
 

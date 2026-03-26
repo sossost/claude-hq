@@ -56,19 +56,21 @@ export default function Dashboard() {
   }, [projects])
 
   // Auto-select most recent session when project changes
-  // Track previous project to only fire on actual project change
-  const prevProjectPathRef = useRef<string | null>(null)
+  // userClearedRef prevents auto-select after explicit "New Session" click
+  const userClearedRef = useRef(false)
+
   useEffect(() => {
+    userClearedRef.current = false
+  }, [selectedProject?.path])
+
+  useEffect(() => {
+    if (userClearedRef.current) return
     const currentPath = selectedProject?.path ?? null
-    if (currentPath === prevProjectPathRef.current) return
-    prevProjectPathRef.current = currentPath
+    if (currentPath == null) return
+    if (activeSessionId != null) return
 
-    if (sessions.length === 0) {
-      clear()
-      return
-    }
-
-    const mostRecent = sessions.find((s) => s.messageCount > 0)
+    const projectSessions = sessions.filter((s) => s.projectPath === currentPath)
+    const mostRecent = projectSessions.find((s) => s.messageCount > 0)
     if (mostRecent == null) return
 
     selectSessionRaw(mostRecent.id).then((session) => {
@@ -76,7 +78,7 @@ export default function Dashboard() {
         loadSession(session)
       }
     })
-  }, [selectedProject?.path, sessions, selectSessionRaw, loadSession, clear])
+  }, [selectedProject?.path, sessions, activeSessionId, selectSessionRaw, loadSession])
 
   const handleProjectSelect = useCallback((project: Project) => {
     const isSameProject = project.path === selectedProject?.path
@@ -113,6 +115,7 @@ export default function Dashboard() {
   }, [activeSessionId, deleteSessionRaw, clear])
 
   const handleNewSession = useCallback(() => {
+    userClearedRef.current = true
     clear()
     setActiveSessionId(null)
   }, [clear, setActiveSessionId])
@@ -239,6 +242,7 @@ export default function Dashboard() {
             messages={messages}
             isRunning={isRunning}
             hasProject={hasProject}
+            projectName={selectedProject?.name}
             onSend={send}
             onStop={stop}
           />
