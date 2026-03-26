@@ -6,20 +6,37 @@ import {
   deleteSession,
   appendMessages,
 } from '@/lib/sessionStore'
-import type { PersistedSession, ChatMessage } from '@/types/events'
+import type { PersistedSession } from '@/types/events'
 
 export const dynamic = 'force-dynamic'
+
+const VALID_ROLES = new Set(['user', 'assistant', 'tool', 'system', 'status'])
+
+function isValidMessage(msg: unknown): boolean {
+  if (msg == null || typeof msg !== 'object') return false
+  const m = msg as Record<string, unknown>
+  return (
+    typeof m.id === 'string' &&
+    typeof m.role === 'string' &&
+    VALID_ROLES.has(m.role) &&
+    typeof m.timestamp === 'number'
+  )
+}
 
 /** GET /api/sessions — List all sessions or fetch one by id */
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id')
 
-  if (id != null) {
+  if (id != null && id !== '') {
     const session = await getSession(id)
     if (session == null) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 })
     }
     return NextResponse.json({ session })
+  }
+
+  if (id === '') {
+    return NextResponse.json({ error: 'id must not be empty' }, { status: 400 })
   }
 
   const sessions = await listSessions()
@@ -34,10 +51,10 @@ export async function GET(request: NextRequest) {
 /** POST /api/sessions — Create a new session */
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  const projectPath = body.projectPath as string
-  const projectName = body.projectName as string
+  const projectPath = typeof body.projectPath === 'string' ? body.projectPath : ''
+  const projectName = typeof body.projectName === 'string' ? body.projectName : ''
 
-  if (projectPath == null || projectPath === '') {
+  if (projectPath === '') {
     return NextResponse.json({ error: 'projectPath is required' }, { status: 400 })
   }
 
@@ -45,7 +62,8 @@ export async function POST(request: NextRequest) {
     id: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     claudeSessionId: null,
     projectPath,
-    projectName: projectName ?? projectPath.split('/').pop() ?? 'unknown',
+    projectName: projectName !== '' ? projectName : projectPath.split('/').pop() ?? 'unknown',
+    title: 'New Session',
     messages: [],
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -58,11 +76,14 @@ export async function POST(request: NextRequest) {
 /** PATCH /api/sessions — Append messages to an existing session */
 export async function PATCH(request: NextRequest) {
   const body = await request.json()
-  const id = body.id as string
-  const messages = body.messages as ChatMessage[]
+  const id = typeof body.id === 'string' ? body.id : ''
+  const messages = Array.isArray(body.messages) ? body.messages : null
 
-  if (id == null || messages == null) {
-    return NextResponse.json({ error: 'id and messages required' }, { status: 400 })
+  if (id === '') {
+    return NextResponse.json({ error: 'id is required' }, { status: 400 })
+  }
+  if (messages == null || !messages.every(isValidMessage)) {
+    return NextResponse.json({ error: 'messages must be a valid ChatMessage array' }, { status: 400 })
   }
 
   await appendMessages(id, messages, null)
@@ -73,7 +94,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id')
 
-  if (id == null) {
+  if (id == null || id === '') {
     return NextResponse.json({ error: 'id is required' }, { status: 400 })
   }
 

@@ -127,7 +127,20 @@ export interface PersistedSession {
   claudeSessionId: string | null
   projectPath: string
   projectName: string
+  title: string
   messages: ChatMessage[]
+  createdAt: number
+  updatedAt: number
+}
+
+/** Lightweight session info for list views (messages omitted) */
+export interface SessionSummary {
+  id: string
+  claudeSessionId: string | null
+  projectPath: string
+  projectName: string
+  title: string
+  messageCount: number
   createdAt: number
   updatedAt: number
 }

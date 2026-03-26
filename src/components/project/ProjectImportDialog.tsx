@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import type { Project } from '@/types/events'
 
 interface ProjectImportDialogProps {
@@ -50,7 +51,7 @@ export function ProjectImportDialog({ onImport, onClose }: ProjectImportDialogPr
     }
   }
 
-  return (
+  return createPortal(
     <div
       ref={backdropRef}
       onClick={handleBackdropClick}
@@ -138,6 +139,7 @@ export function ProjectImportDialog({ onImport, onClose }: ProjectImportDialogPr
           ))}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }

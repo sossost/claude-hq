@@ -3,7 +3,11 @@ import { existsSync } from 'fs'
 import { join } from 'path'
 import type { PersistedSession, ChatMessage } from '@/types/events'
 
-const SESSION_DIR = join(process.env.HOME ?? '', '.claude', 'dashboard')
+const HOME = process.env.HOME
+if (HOME == null || HOME === '') {
+  throw new Error('HOME environment variable is required')
+}
+const SESSION_DIR = join(HOME, '.claude', 'dashboard')
 const SESSION_FILE = join(SESSION_DIR, 'sessions.json')
 const MAX_SESSIONS = 50
 
@@ -50,8 +54,17 @@ export async function appendMessages(
 
   if (session == null) return
 
+  const needsTitle = session.title === 'New Session' && session.messages.length === 0
+  const firstUserMessage = needsTitle
+    ? messages.find((m) => m.role === 'user')
+    : null
+  const title = firstUserMessage != null
+    ? deriveTitle(firstUserMessage.content)
+    : session.title
+
   const updated: PersistedSession = {
     ...session,
+    title,
     messages: [...session.messages, ...messages],
     updatedAt: Date.now(),
     claudeSessionId: claudeSessionId ?? session.claudeSessionId,
@@ -59,6 +72,14 @@ export async function appendMessages(
 
   const next = sessions.map((s) => s.id === sessionId ? updated : s)
   await writeAllSessions(next)
+}
+
+const TITLE_MAX_LENGTH = 40
+
+function deriveTitle(content: string): string {
+  const firstLine = content.split('\n')[0].trim()
+  if (firstLine.length <= TITLE_MAX_LENGTH) return firstLine
+  return firstLine.slice(0, TITLE_MAX_LENGTH) + '…'
 }
 
 // ─── File I/O ──────────────────────────────────────────
@@ -74,7 +95,16 @@ async function readAllSessions(): Promise<PersistedSession[]> {
 
     if (!Array.isArray(parsed)) return []
     return parsed as PersistedSession[]
-  } catch {
+  } catch (err) {
+    console.error('[sessionStore] Failed to read sessions.json:', err)
+    // Backup corrupted file before it gets overwritten
+    try {
+      const backupPath = `${SESSION_FILE}.${Date.now()}.bak`
+      const { copyFile } = await import('fs/promises')
+      await copyFile(SESSION_FILE, backupPath)
+    } catch {
+      // Backup failure is non-fatal
+    }
     return []
   }
 }

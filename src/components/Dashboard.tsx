@@ -1,21 +1,35 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useChat } from '@/lib/useChat'
 import { useTheme } from '@/lib/useTheme'
 import { useProjects } from '@/lib/useProjects'
+import { useSessions } from '@/lib/useSessions'
 import { ChatPanel } from '@/components/chat'
 import { ProjectList } from '@/components/project'
-import type { Project, PersistedSession } from '@/types/events'
+import { SessionList } from '@/components/session'
+import type { Project } from '@/types/events'
+
+type SidebarView = 'projects' | 'sessions'
 
 export default function Dashboard() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
+  const [sidebarView, setSidebarView] = useState<SidebarView>('projects')
   const { projects, isLoading: projectsLoading, importProject, removeProject } = useProjects()
   const { messages, isRunning, send, stop, clear, loadSession } = useChat({
     project: selectedProject,
   })
   const { toggle, theme } = useTheme()
+  const {
+    sessions,
+    activeSessionId,
+    createSession: createSessionRaw,
+    selectSession: selectSessionRaw,
+    deleteSession: deleteSessionRaw,
+    setActiveSessionId,
+    refresh: refreshSessions,
+  } = useSessions({ projectPath: selectedProject?.path ?? null })
 
   // Restore last used project
   useEffect(() => {
@@ -26,57 +40,85 @@ export default function Dashboard() {
       const found = projects.find((p) => p.path === lastPath)
       if (found != null) {
         setSelectedProject(found)
+        setSidebarView('sessions')
         return
       }
     }
 
     setSelectedProject(projects[0])
+    setSidebarView('sessions')
   }, [projects])
 
-  // Restore last session for the selected project
+  // Auto-select most recent session when project changes
+  // Track previous project to only fire on actual project change
+  const prevProjectPathRef = useRef<string | null>(null)
   useEffect(() => {
-    if (selectedProject == null) return
+    const currentPath = selectedProject?.path ?? null
+    if (currentPath === prevProjectPathRef.current) return
+    prevProjectPathRef.current = currentPath
 
-    fetch('/api/sessions')
-      .then((res) => res.json())
-      .then((data) => {
-        const sessions = data.sessions as Array<PersistedSession & { messageCount: number }>
-        const lastSession = sessions.find(
-          (s) => s.projectPath === selectedProject.path && s.messageCount > 0,
-        )
-        if (lastSession == null) return
+    if (sessions.length === 0) {
+      clear()
+      return
+    }
 
-        return fetch(`/api/sessions?id=${lastSession.id}`)
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.session != null) {
-              loadSession(data.session)
-            }
-          })
-      })
-      .catch(() => {
-        // Restore failure is non-fatal
-      })
-  }, [selectedProject, loadSession])
+    const mostRecent = sessions.find((s) => s.messageCount > 0)
+    if (mostRecent == null) return
 
-  function handleProjectSelect(project: Project) {
-    if (project.path === selectedProject?.path) return
-    setSelectedProject(project)
-    localStorage.setItem('lastProjectPath', project.path)
-    clear()
-  }
+    selectSessionRaw(mostRecent.id).then((session) => {
+      if (session != null) {
+        loadSession(session)
+      }
+    })
+  }, [selectedProject?.path, sessions, selectSessionRaw, loadSession, clear])
 
-  async function handleProjectRemove(path: string) {
+  const handleProjectSelect = useCallback((project: Project) => {
+    const isSameProject = project.path === selectedProject?.path
+    if (!isSameProject) {
+      setSelectedProject(project)
+      localStorage.setItem('lastProjectPath', project.path)
+      clear()
+    }
+    setSidebarView('sessions')
+  }, [selectedProject?.path, clear])
+
+  const handleProjectRemove = useCallback(async (path: string) => {
     await removeProject(path)
     if (selectedProject?.path === path) {
       setSelectedProject(null)
+      setSidebarView('projects')
       clear()
     }
-  }
+  }, [selectedProject?.path, removeProject, clear])
 
-  function handleNewSession() {
+  const handleSessionSelect = useCallback(async (id: string) => {
+    if (id === activeSessionId) return
+    const session = await selectSessionRaw(id)
+    if (session != null) {
+      loadSession(session)
+    }
+  }, [activeSessionId, selectSessionRaw, loadSession])
+
+  const handleSessionDelete = useCallback(async (id: string) => {
+    await deleteSessionRaw(id)
+    if (id === activeSessionId) {
+      clear()
+    }
+  }, [activeSessionId, deleteSessionRaw, clear])
+
+  const handleNewSession = useCallback(() => {
     clear()
-  }
+    setActiveSessionId(null)
+  }, [clear, setActiveSessionId])
+
+  // Refresh session list after chat completes (title may have updated)
+  const wasRunningRef = useRef(false)
+  useEffect(() => {
+    if (wasRunningRef.current && !isRunning) {
+      refreshSessions()
+    }
+    wasRunningRef.current = isRunning
+  }, [isRunning, refreshSessions])
 
   const hasProject = selectedProject != null
 
@@ -144,14 +186,37 @@ export default function Dashboard() {
               background: 'var(--surface)',
             }}
           >
-            <ProjectList
-              projects={projects}
-              selected={selectedProject}
-              onSelect={handleProjectSelect}
-              onImport={importProject}
-              onRemove={handleProjectRemove}
-              isLoading={projectsLoading}
-            />
+            <div
+              className="flex h-full transition-transform duration-200 ease-in-out"
+              style={{
+                width: '200%',
+                transform: sidebarView === 'sessions' ? 'translateX(-50%)' : 'translateX(0)',
+              }}
+            >
+              <div className="w-1/2 h-full overflow-y-auto">
+                <ProjectList
+                  projects={projects}
+                  selected={selectedProject}
+                  onSelect={handleProjectSelect}
+                  onImport={importProject}
+                  onRemove={handleProjectRemove}
+                  isLoading={projectsLoading}
+                />
+              </div>
+              <div className="w-1/2 h-full">
+                {selectedProject != null && (
+                  <SessionList
+                    projectName={selectedProject.name}
+                    sessions={sessions}
+                    activeSessionId={activeSessionId}
+                    onSelect={handleSessionSelect}
+                    onDelete={handleSessionDelete}
+                    onNewSession={handleNewSession}
+                    onBack={() => setSidebarView('projects')}
+                  />
+                )}
+              </div>
+            </div>
           </aside>
         )}
 

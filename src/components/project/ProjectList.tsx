@@ -33,8 +33,11 @@ export function ProjectList({
   }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="px-3 pt-3 pb-1 flex items-center justify-between">
+    <div className="flex flex-col">
+      <div
+        className="px-3 pt-3 pb-2 flex items-center justify-between"
+        style={{ borderBottom: '1px solid var(--border)' }}
+      >
         <span className="text-[10px] font-semibold uppercase tracking-wider" style={{ color: 'var(--content-muted)' }}>
           Projects
         </span>
@@ -42,12 +45,13 @@ export function ProjectList({
           onClick={() => setIsImportOpen(true)}
           className="text-[10px] font-medium transition-colors"
           style={{ color: 'var(--content-muted)' }}
+          aria-label="Import project"
         >
           + Import
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-1">
+      <div className="overflow-y-auto px-2 pt-1">
         {projects.length === 0 && (
           <div className="px-3 py-12 text-center text-xs" style={{ color: 'var(--content-muted)' }}>
             No projects imported
