@@ -23,21 +23,21 @@
 - [ ] Search sessions
 - [x] Session summaries (title, message count, relative time via `SessionSummary` type)
 
-## Phase 3: Agent Visibility (in progress)
+## Phase 3: Agent Visibility (done)
 
 **Core**: See what sub-agents are doing at a glance.
 
-- [ ] Detect Agent tool calls (`tool_use.name === "Agent"`)
+- [x] Detect Agent tool calls (`tool_use.name === "Agent"`)
 - [x] Agent cards (name, model, category, source badge) — static catalog from `.claude/agents/` scanning
-- [ ] Parallel agent visualization (concurrent execution)
+- [x] Parallel agent visualization (concurrent execution) — task grid with KPI bar in AgentWorkspace
 - [ ] Tool call timeline (chronological activity)
 - [ ] Agent tree (manager → sub-agent hierarchy)
 
-> **Note**: Static agent catalog is implemented — agents are scanned from project-local
-> (`.claude/agents/*.md`), global user (`~/.claude/agents/*.md`), and built-in definitions.
-> Agents are grouped by category (planning, quality, build, maintenance, exploration) in a
-> toggleable right panel. Runtime agent visibility (detecting live Agent tool calls during
-> chat) is NOT yet implemented.
+> **Note**: Static agent catalog and runtime task dashboard are both implemented. The catalog
+> scans project-local (`.claude/agents/*.md`), global user (`~/.claude/agents/*.md`), and
+> built-in agent definitions, grouped by category in a toggleable right panel. The Agent Task
+> Dashboard derives live `AgentTask[]` from the SSE stream — cards fade in on spawn and fade
+> out after completion. Tool call timeline and agent tree hierarchy remain out of scope for now.
 
 ## Phase 4: Scheduling & Automation
 

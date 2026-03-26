@@ -68,9 +68,12 @@ src/
 │   │   ├── index.ts              ← Public API (SessionList)
 │   │   ├── SessionList.tsx       ← Session list with back nav, new session button
 │   │   └── SessionItem.tsx       ← Session row with title, message count, relative time
-│   └── agent/                    ← Agent catalog module
+│   └── agent/                    ← Agent catalog + task dashboard module
 │       ├── index.ts              ← Public API (AgentPanel)
-│       ├── AgentPanel.tsx        ← Agent list grouped by category
+│       ├── AgentPanel.tsx        ← Stacks AgentWorkspace (when active) above AgentCatalog (always visible)
+│       ├── AgentCatalog.tsx      ← Extracted catalog view grouped by category
+│       ├── AgentWorkspace.tsx    ← Grid workspace with KPI bar (running/done/error counts)
+│       ├── AgentTaskCard.tsx     ← Runtime task card with status, progress, fade-in/out animation
 │       └── AgentCard.tsx         ← Agent card with avatar, model color, source badge
 ├── lib/
 │   ├── claudeProcess.ts          ← ClaudeSession class (spawn + parse stream-json)
@@ -83,10 +86,13 @@ src/
 │   ├── useProjects.ts            ← Project list + import/remove hook
 │   ├── useSessions.ts            ← Session CRUD + active session tracking hook
 │   ├── useAgents.ts              ← Agent catalog fetching hook (per-project)
+│   ├── useAgentTasks.ts          ← Derives AgentTask[] from ChatMessage[] (running/done/error)
 │   └── useTheme.ts               ← Dark/light toggle hook
 └── types/
     └── events.ts                 ← All type definitions (events, messages, project, session, agent)
 ```
+
+> `src/components/chat/messages/safeContent.ts` — Defensive content rendering utility (safe extraction of text from unknown message shapes)
 
 ## Layout
 
@@ -95,14 +101,15 @@ src/
 │  ☰ Claude HQ   project-name   [Running] [D/L] [Agents] [+] │
 ├────────────┬─────────────────────────┬──────────────────────┤
 │ PROJECTS   │                         │ AGENTS               │
-│ > project1 │     Chat Messages       │ ── Planning ──       │
-│   project2 │                         │ [planner] [architect]│
-│            │                         │ ── Quality ──        │
-│ (+ Import) │                         │ [code-reviewer] ...  │
-│            ├─────────────────────────┤                      │
-│ ← SESSIONS │  Chat Input             │ [project badge]      │
-│  session-1 │                         │                      │
-│  session-2 │                         │                      │
+│ > project1 │     Chat Messages       │ ┌ Workspace (active) ┐│
+│   project2 │                         │ │ [2 running][1 done]││
+│            │                         │ │ [task-A] [task-B]  ││
+│ (+ Import) │                         │ └────────────────────┘│
+│            │                         │ ── Planning ──       │
+│            ├─────────────────────────┤ [planner] [architect]│
+│ ← SESSIONS │  Chat Input             │ ── Quality ──        │
+│  session-1 │                         │ [code-reviewer] ...  │
+│  session-2 │                         │ [project badge]      │
 └────────────┴─────────────────────────┴──────────────────────┘
 ```
 
@@ -112,7 +119,10 @@ src/
   - Slide transition: `translateX` animation between the two views
 - Chat panel: self-contained module (messages + input), fills remaining width
 - Agent panel: right side, toggleable, 40% width (min 20rem, max 36rem)
-  - Shows agents grouped by category (planning, quality, build, maintenance, exploration)
+  - Stacked layout: AgentWorkspace (top, only when tasks are present) above AgentCatalog (always visible)
+  - Workspace: KPI bar (running/done/error counts) + task cards in a responsive grid
+  - Task cards: fade in on spawn, fade out after completion; show agent name, status, and progress
+  - Catalog: agents grouped by category (planning, quality, build, maintenance, exploration)
   - Displays project-local agents with "project" badge
 - Header: sidebar toggle, project name, running indicator, theme toggle, agent panel toggle, new session
 
@@ -144,6 +154,14 @@ src/
 4. Each `.md` file is parsed for YAML frontmatter fields: `name`, `description`, `model`, `tools`
 5. Category is derived from name lookup table or description keyword matching
 6. Agent panel displays agents grouped by category with model-colored avatars
+
+### Agent Task Monitoring
+1. `claudeProcess` detects `tool_use` events where `name === 'Agent'` and preserves `toolUseId` for correlation
+2. `useAgentTasks` hook derives `AgentTask[]` from the full `ChatMessage[]` array — no extra API calls
+   - A task is `running` when a `tool_use` (Agent) event has no matching `tool_result` yet
+   - A task transitions to `done` or `error` when the correlated `tool_result` arrives
+3. `AgentWorkspace` renders the active task list as a responsive card grid with a KPI bar (running / done / error counts) at the top
+4. `AgentTaskCard` fades in when a task spawns and fades out after completion, giving a live sense of parallel execution
 
 ## Project Management
 
@@ -187,6 +205,8 @@ All colors are managed via semantic CSS variables in `globals.css`.
 | Sidebar navigation | Slide transition (translateX) | Smooth switch between projects and sessions without route change |
 | Agent catalog | Static file scanning | Reads `.md` frontmatter from `.claude/agents/` dirs — no runtime process needed |
 | Agent panel | Toggleable right panel (40% width) | Non-intrusive — user controls visibility; does not shrink chat below usable width |
+| Agent task detection | Stream parsing (`tool_use.name === 'Agent'` with `toolUseId` correlation) | Zero extra API calls — task state is fully derived from the existing SSE message stream |
+| Agent panel layout | Stacked (workspace on top when active, catalog always below) | No tabs needed — workspace appears only when tasks exist; catalog is always accessible |
 | Import dialog | Portal-based (`createPortal` to `document.body`) | Avoids z-index/overflow issues from sidebar containment |
 | Session scoping | Filter by `projectPath` client-side | Single sessions API, no per-project endpoints — keeps API surface minimal |
 
