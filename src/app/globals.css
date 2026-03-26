@@ -3,89 +3,89 @@
 :root {
   /* ── Surface ────────────────────────── */
   --background: #ffffff;
-  --foreground: #111827;
-  --surface: #f9fafb;
-  --surface-hover: #f3f4f6;
+  --foreground: #09090b;
+  --surface: #f4f4f5;
+  --surface-hover: #e4e4e7;
 
   /* ── Content ────────────────────────── */
-  --content-secondary: #6b7280;
-  --content-muted: #9ca3af;
+  --content-secondary: #71717a;
+  --content-muted: #a1a1aa;
 
   /* ── Border ─────────────────────────── */
-  --border: #e5e7eb;
-  --ring: #6366f1;
+  --border: #e4e4e7;
+  --ring: #18181b;
 
   /* ── Primary ────────────────────────── */
-  --primary: #4f46e5;
-  --primary-hover: #4338ca;
-  --primary-foreground: #ffffff;
+  --primary: #18181b;
+  --primary-hover: #09090b;
+  --primary-foreground: #fafafa;
 
   /* ── Status ─────────────────────────── */
-  --success: #22c55e;
-  --success-muted: #4ade80;
+  --success: #10b981;
+  --success-muted: #34d399;
   --error: #ef4444;
   --error-hover: #dc2626;
   --error-foreground: #ffffff;
-  --warning: #d97706;
+  --warning: #f59e0b;
 
   /* ── Input ──────────────────────────── */
   --input: #ffffff;
-  --input-border: #d1d5db;
+  --input-border: #d4d4d8;
 
   /* ── Chat ───────────────────────────── */
-  --chat-user: #e0e7ff;
-  --chat-user-foreground: #312e81;
-  --chat-tool: #f9fafb;
-  --chat-tool-border: #e5e7eb;
-  --chat-tool-header: #f3f4f6;
+  --chat-user: #f4f4f5;
+  --chat-user-foreground: #18181b;
+  --chat-tool: #fafafa;
+  --chat-tool-border: #e4e4e7;
+  --chat-tool-header: #f4f4f5;
 
   /* ── Overlay ────────────────────────── */
-  --overlay: rgba(0, 0, 0, 0.5);
+  --overlay: rgba(0, 0, 0, 0.4);
 
   color-scheme: light;
 }
 
 .dark {
   /* ── Surface ────────────────────────── */
-  --background: #0a0a0a;
+  --background: #09090b;
   --foreground: #fafafa;
-  --surface: #111111;
-  --surface-hover: #1a1a1a;
+  --surface: #151518;
+  --surface-hover: #1f1f23;
 
   /* ── Content ────────────────────────── */
   --content-secondary: #a1a1aa;
   --content-muted: #52525b;
 
   /* ── Border ─────────────────────────── */
-  --border: #262626;
-  --ring: #818cf8;
+  --border: #27272a;
+  --ring: #d4d4d8;
 
   /* ── Primary ────────────────────────── */
-  --primary: #e5e7eb;
-  --primary-hover: #ffffff;
-  --primary-foreground: #111827;
+  --primary: #fafafa;
+  --primary-hover: #e4e4e7;
+  --primary-foreground: #09090b;
 
   /* ── Status ─────────────────────────── */
-  --success: #22c55e;
-  --success-muted: #4ade80;
+  --success: #10b981;
+  --success-muted: #34d399;
   --error: #ef4444;
   --error-hover: #dc2626;
   --error-foreground: #ffffff;
   --warning: #fbbf24;
 
   /* ── Input ──────────────────────────── */
-  --input: #18181b;
-  --input-border: #3f3f46;
+  --input: #151518;
+  --input-border: #27272a;
 
   /* ── Chat ───────────────────────────── */
-  --chat-user: #312e81;
-  --chat-user-foreground: #e0e7ff;
-  --chat-tool: rgba(24, 24, 27, 0.5);
-  --chat-tool-border: #262626;
-  --chat-tool-header: #18181b;
+  --chat-user: #1f1f23;
+  --chat-user-foreground: #fafafa;
+  --chat-tool: rgba(21, 21, 24, 0.6);
+  --chat-tool-border: #27272a;
+  --chat-tool-header: #151518;
 
   /* ── Overlay ────────────────────────── */
-  --overlay: rgba(0, 0, 0, 0.7);
+  --overlay: rgba(0, 0, 0, 0.6);
 
   color-scheme: dark;
 }

@@ -28,7 +28,7 @@ Claude Model
 ```
 
 - **No SSR** — page uses `dynamic(() => import(...), { ssr: false })`. Local-only tool, SSR adds no value.
-- **No external DB** — sessions stored in `~/.claude/dashboard/sessions.json`
+- **No external DB** — sessions in `~/.claude/dashboard/sessions.json`, workspace in `workspace.json`
 - **No cloud deployment** — requires `claude` CLI on the same machine
 
 ## Project Structure
@@ -38,45 +38,98 @@ src/
 ├── app/
 │   ├── page.tsx                  ← Entry point (dynamic import, no SSR)
 │   ├── layout.tsx                ← Root layout + theme init script
-│   ├── globals.css               ← CSS variables for light/dark theme
+│   ├── globals.css               ← Semantic design tokens (light/dark)
 │   └── api/
 │       ├── chat/route.ts         ← Spawns claude CLI, streams SSE
-│       ├── projects/route.ts     ← Lists projects from ~/.claude/projects/
+│       ├── projects/route.ts     ← Project workspace CRUD + available listing
 │       └── sessions/route.ts     ← Session CRUD (GET/POST/PATCH/DELETE)
 ├── components/
-│   ├── Dashboard.tsx             ← Main dashboard layout (client-only)
-│   ├── ChatMessages.tsx          ← Message rendering (text, tool, status)
-│   ├── ChatInput.tsx             ← Input with IME composition handling
-│   └── ProjectSelector.tsx       ← Dropdown with search
+│   ├── Dashboard.tsx             ← Layout orchestration (header + sidebar + main)
+│   ├── chat/                     ← Chat panel module
+│   │   ├── index.ts              ← Public API (ChatPanel)
+│   │   ├── ChatPanel.tsx         ← Composes Messages + Input
+│   │   ├── ChatMessages.tsx      ← Message list + auto-scroll
+│   │   ├── ChatInput.tsx         ← Input with IME composition handling
+│   │   ├── ChatEmptyState.tsx    ← Empty state placeholder
+│   │   ├── RunningIndicator.tsx  ← Running status dot
+│   │   └── messages/             ← Per-type bubble components
+│   │       ├── UserBubble.tsx
+│   │       ├── AssistantBubble.tsx
+│   │       ├── ToolBubble.tsx
+│   │       ├── StatusBubble.tsx
+│   │       └── SystemBubble.tsx
+│   └── project/                  ← Project selector module
+│       ├── index.ts              ← Public API (ProjectList)
+│       ├── ProjectList.tsx       ← Sidebar project list
+│       ├── ProjectItem.tsx       ← Project row with remove
+│       └── ProjectImportDialog.tsx ← Import modal
 ├── lib/
 │   ├── claudeProcess.ts          ← ClaudeSession class (spawn + parse stream-json)
+│   ├── pathValidator.ts          ← Path traversal prevention (HOME boundary)
 │   ├── projectStore.ts           ← Scans ~/.claude/projects/, decodes folder names
-│   ├── sessionStore.ts           ← Read/write sessions.json
-│   ├── useChat.ts                ← Chat state + session persistence hook
-│   ├── useProjects.ts            ← Project list fetch hook
+│   ├── workspaceStore.ts         ← Imported projects CRUD (workspace.json)
+│   ├── sessionStore.ts           ← Session persistence (sessions.json)
+│   ├── useChat.ts                ← Chat state + SSE streaming hook
+│   ├── useProjects.ts            ← Project list + import/remove hook
 │   └── useTheme.ts               ← Dark/light toggle hook
 └── types/
     └── events.ts                 ← All type definitions (events, messages, project, session)
 ```
 
+## Layout
+
+```
+┌──────────────────────────────────────┐
+│  ☰ Claude HQ   project-name   [D/L] │
+├────────────┬─────────────────────────┤
+│ PROJECTS   │                         │
+│ > project1 │     Chat Messages       │
+│   project2 │                         │
+│            │                         │
+│ (+ Import) ├─────────────────────────┤
+│            │  Chat Input             │
+└────────────┴─────────────────────────┘
+```
+
+- Sidebar: collapsible, shows imported projects only
+- Chat panel: self-contained module (messages + input)
+- Header: sidebar toggle, project name, theme, new session
+
 ## Key Data Flow
 
 1. User sends message → `POST /api/chat` with `{ prompt, cwd, claudeSessionId }`
-2. Server spawns `claude -p` child process with stream-json output
+2. Server validates path (`assertSafePath`) and spawns `claude -p` child process
 3. Each NDJSON line is parsed into a `ChatMessage` and sent via SSE
 4. Client receives SSE events and appends to message list
 5. On completion, messages are persisted to `~/.claude/dashboard/sessions.json`
 6. Next message sends `claudeSessionId` for `--resume` continuity
 
-## Design Direction
+## Project Management
 
-**Modular dashboard, not a chat app.**
+- Projects are **imported** by the user, not auto-listed
+- `~/.claude/projects/` is scanned for available projects (import dialog)
+- Imported projects are stored in `~/.claude/dashboard/workspace.json`
+- Users can remove projects from their workspace at any time
 
-Current state is chat-centric (Phase 1 prototype). Target architecture:
-- Each feature is an **independent widget/panel** (chat, agents, sessions, schedules)
-- Board layout with collapsible/resizable panels
-- Visual personality: agent avatars, depth/shadows, micro-animations for agent states
-- See `NOTES.local.md` for detailed design notes (not in git)
+## Design System
+
+All colors are managed via semantic CSS variables in `globals.css`.
+
+| Category | Tokens | Purpose |
+|----------|--------|---------|
+| Surface | `--background`, `--foreground`, `--surface`, `--surface-hover` | Background hierarchy |
+| Content | `--content-secondary`, `--content-muted` | Text hierarchy |
+| Border | `--border`, `--ring` | Borders and focus rings |
+| Primary | `--primary`, `--primary-foreground` | Primary actions |
+| Status | `--success`, `--error`, `--warning` | State indicators |
+| Input | `--input`, `--input-border` | Form elements |
+| Chat | `--chat-user`, `--chat-tool-*` | Domain-specific |
+| Overlay | `--overlay` | Modal backdrops |
+
+**Rules:**
+- All colors MUST come from CSS variables — no Tailwind color classes, no inline hex/rgba
+- Dark mode is handled by `.dark` class toggling variable values
+- Components use `style={{ color: 'var(--token)' }}` for theme-aware colors
 
 ## Technical Decisions
 
@@ -85,9 +138,11 @@ Current state is chat-centric (Phase 1 prototype). Target architecture:
 | CLI vs Agent SDK | CLI (`claude -p`) | SDK requires API key (extra cost), CLI uses Max subscription |
 | Streaming format | `stream-json` NDJSON | Real-time events: tool calls, text, status — all in one stream |
 | Session resume | `--resume SESSION_ID` | Context preserved across messages within same chat session |
-| Project detection | `~/.claude/projects/` scan | Auto-detect, zero config — Claude Code creates these folders |
+| Project management | Import/remove model | User curates workspace — avoids noise from auto-detected projects |
 | Session storage | JSON file | Simple, local, no DB dependency — fits single-user local tool |
 | SSR | Disabled (`ssr: false`) | Local tool, no SEO/performance benefit from SSR |
+| Color system | Semantic CSS variables | Single source of truth, auto dark mode, no Tailwind color leakage |
+| Path validation | HOME boundary check | Prevents path traversal from localhost requests |
 
 ## Scripts
 
@@ -105,6 +160,8 @@ yarn lint         # ESLint
 - **Commit in small units** — one logical change per commit, get approval before committing
 - **No SSR** — all page components are client-only
 - **Local-only assumptions are OK** — this tool will never run in the cloud
+- **No Tailwind color classes** — all colors via CSS variables in globals.css
+- **Immutable data patterns** — no direct mutation, use spread/map
 
 ## Docs
 
