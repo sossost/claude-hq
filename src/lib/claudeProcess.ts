@@ -127,11 +127,17 @@ export class ClaudeSession extends EventEmitter {
       return []
     }
 
-    // Assistant message — text or tool call
+    // Assistant message — text, thinking, or tool call
     if (type === 'assistant') {
       const msg = event['message'] as Record<string, unknown>
       const content = msg['content'] as Array<Record<string, unknown>>
       const results: ChatMessage[] = []
+
+      // Collect thinking text from all thinking blocks in this event
+      const thinkingText = content
+        .filter((block) => block['type'] === 'thinking' && typeof block['thinking'] === 'string' && block['thinking'] !== '')
+        .map((block) => block['thinking'] as string)
+        .join('\n') || undefined
 
       for (const block of content) {
         if (block['type'] === 'text') {
@@ -140,6 +146,7 @@ export class ClaudeSession extends EventEmitter {
             id: nextId(),
             role: 'assistant',
             content: typeof text === 'string' ? text : JSON.stringify(text),
+            ...(thinkingText != null ? { thinking: thinkingText } : {}),
             timestamp: Date.now(),
           })
         }

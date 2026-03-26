@@ -2,15 +2,24 @@
 
 import type { ChatMessage } from '@/types/events'
 import { safeContent } from './safeContent'
+import { MarkdownRenderer } from './MarkdownRenderer'
+import { ThinkingBlock } from './ThinkingBlock'
 
 interface AssistantBubbleProps {
   message: Extract<ChatMessage, { role: 'assistant' }>
+  isStreaming?: boolean
 }
 
-export function AssistantBubble({ message }: AssistantBubbleProps) {
+export function AssistantBubble({ message, isStreaming = false }: AssistantBubbleProps) {
+  const content = safeContent(message.content)
+  const thinking = message.thinking
+
   return (
-    <div className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground)' }}>
-      {safeContent(message.content)}
+    <div className="text-sm" style={{ color: 'var(--foreground)' }}>
+      {thinking != null && thinking !== '' && (
+        <ThinkingBlock content={thinking} isStreaming={isStreaming} />
+      )}
+      <MarkdownRenderer content={content} />
     </div>
   )
 }

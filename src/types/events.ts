@@ -82,6 +82,7 @@ interface AssistantMessage {
   id: string
   role: 'assistant'
   content: string
+  thinking?: string
   timestamp: number
 }
 

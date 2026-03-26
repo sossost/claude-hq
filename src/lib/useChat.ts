@@ -124,15 +124,25 @@ export function useChat({ project }: UseChatOptions): UseChatReturn {
             // Merge consecutive assistant text chunks
             setMessages((prev) => {
               const last = prev[prev.length - 1]
+              const isAssistantMsg = msg.role === 'assistant'
+                && typeof msg.content === 'string'
               if (
-                msg.role === 'assistant' &&
+                isAssistantMsg &&
                 last != null &&
                 last.role === 'assistant' &&
                 Date.now() - last.timestamp < ASSISTANT_CHUNK_MERGE_WINDOW_MS
               ) {
+                const incomingThinking = typeof msg.thinking === 'string' ? msg.thinking : undefined
+                const mergedThinking = incomingThinking != null
+                  ? (last.thinking ?? '') + incomingThinking
+                  : last.thinking
                 return [
                   ...prev.slice(0, -1),
-                  { ...last, content: last.content + msg.content },
+                  {
+                    ...last,
+                    content: last.content + (msg.content as string),
+                    ...(mergedThinking != null ? { thinking: mergedThinking } : {}),
+                  },
                 ]
               }
               return [...prev, msg as ChatMessage]
