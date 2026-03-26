@@ -1,4 +1,7 @@
+'use client'
+
 import type { ChatMessage } from '@/types/events'
+import { safeContent } from './safeContent'
 
 interface AssistantBubbleProps {
   message: Extract<ChatMessage, { role: 'assistant' }>
@@ -7,7 +10,7 @@ interface AssistantBubbleProps {
 export function AssistantBubble({ message }: AssistantBubbleProps) {
   return (
     <div className="text-sm whitespace-pre-wrap" style={{ color: 'var(--foreground)' }}>
-      {message.content}
+      {safeContent(message.content)}
     </div>
   )
 }

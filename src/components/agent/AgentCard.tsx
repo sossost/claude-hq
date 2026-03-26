@@ -50,7 +50,7 @@ export function AgentCard({ agent }: AgentCardProps) {
         className="w-10 h-10 rounded-full flex items-center justify-center text-xs font-bold mb-2"
         style={{
           background: color,
-          color: '#fff',
+          color: 'var(--primary-foreground)',
           opacity: 0.9,
         }}
       >

@@ -6,6 +6,7 @@ import { useTheme } from '@/lib/useTheme'
 import { useProjects } from '@/lib/useProjects'
 import { useSessions } from '@/lib/useSessions'
 import { useAgents } from '@/lib/useAgents'
+import { useAgentTasks } from '@/lib/useAgentTasks'
 import { ChatPanel } from '@/components/chat'
 import { ProjectList } from '@/components/project'
 import { SessionList } from '@/components/session'
@@ -25,6 +26,7 @@ export default function Dashboard() {
   })
   const { toggle, theme } = useTheme()
   const { agents, isLoading: agentsLoading } = useAgents({ projectPath: selectedProject?.path ?? null })
+  const { tasks: agentTasks, kpi: agentKpi } = useAgentTasks(messages, isRunning)
   const {
     sessions,
     activeSessionId,
@@ -253,7 +255,12 @@ export default function Dashboard() {
               background: 'var(--surface)',
             }}
           >
-            <AgentPanel agents={agents} isLoading={agentsLoading} />
+            <AgentPanel
+              agents={agents}
+              isLoading={agentsLoading}
+              agentTasks={agentTasks}
+              agentKpi={agentKpi}
+            />
           </aside>
         )}
       </div>

@@ -1,3 +1,7 @@
+/** Shared constants for tool message matching */
+export const TOOL_RESULT_NAME = '→ result'
+export const AGENT_TOOL_NAME = 'Agent'
+
 /** Event types from `claude -p --output-format stream-json --verbose` */
 
 export interface SystemInitEvent {
@@ -81,10 +85,11 @@ interface AssistantMessage {
   timestamp: number
 }
 
-interface ToolMessage {
+export interface ToolMessage {
   id: string
   role: 'tool'
   toolName: string
+  toolUseId?: string
   input: string
   output: string | null
   isError: boolean
@@ -158,4 +163,26 @@ export interface AgentDefinition {
   model: AgentModel
   source: AgentSource
   category: AgentCategory
+}
+
+// ─── Agent Task (Runtime) ────────────────────────────
+
+export type AgentTaskStatus = 'running' | 'done' | 'error'
+
+export interface AgentTask {
+  id: string
+  agentName: string
+  description: string
+  status: AgentTaskStatus
+  model?: string
+  subagentType?: string
+  startedAt: number
+  completedAt?: number
+  elapsedMs: number
+}
+
+export interface AgentTaskKpi {
+  active: number
+  done: number
+  error: number
 }

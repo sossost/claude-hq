@@ -1,4 +1,7 @@
+'use client'
+
 import type { ChatMessage } from '@/types/events'
+import { safeContent } from './safeContent'
 
 interface UserBubbleProps {
   message: Extract<ChatMessage, { role: 'user' }>
@@ -11,7 +14,7 @@ export function UserBubble({ message }: UserBubbleProps) {
         className="rounded-2xl px-4 py-2.5 text-sm max-w-[80%]"
         style={{ background: 'var(--chat-user)', color: 'var(--chat-user-foreground)' }}
       >
-        {message.content}
+        {safeContent(message.content)}
       </div>
     </div>
   )

@@ -1,11 +1,17 @@
+'use client'
+
 import type { ChatMessage } from '@/types/events'
+import { TOOL_RESULT_NAME } from '@/types/events'
+import { safeContent } from './safeContent'
 
 interface ToolBubbleProps {
   message: Extract<ChatMessage, { role: 'tool' }>
 }
 
 export function ToolBubble({ message }: ToolBubbleProps) {
-  const isResult = message.toolName === '→ result'
+  const isResult = message.toolName === TOOL_RESULT_NAME
+  const input = safeContent(message.input)
+  const output = message.output != null ? safeContent(message.output) : null
 
   return (
     <div
@@ -18,15 +24,15 @@ export function ToolBubble({ message }: ToolBubbleProps) {
           style={{ borderBottom: '1px solid var(--chat-tool-border)', background: 'var(--chat-tool-header)' }}
         >
           <span className="font-medium" style={{ color: 'var(--warning)' }}>{message.toolName}</span>
-          <span className="truncate" style={{ color: 'var(--content-muted)' }}>{message.input}</span>
+          <span className="truncate" style={{ color: 'var(--content-muted)' }}>{input}</span>
         </div>
       )}
-      {message.output != null && (
+      {output != null && output !== '' && (
         <pre
           className="px-3 py-2 whitespace-pre-wrap break-all"
           style={{ color: message.isError ? 'var(--error)' : 'var(--content-secondary)' }}
         >
-          {message.output}
+          {output}
         </pre>
       )}
     </div>

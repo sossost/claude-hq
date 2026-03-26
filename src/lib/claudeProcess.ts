@@ -1,6 +1,7 @@
 import { spawn, type ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
 import type { ChatMessage } from '@/types/events'
+import { TOOL_RESULT_NAME } from '@/types/events'
 
 const TOOL_OUTPUT_MAX_LENGTH = 500
 
@@ -134,15 +135,18 @@ export class ClaudeSession extends EventEmitter {
 
       for (const block of content) {
         if (block['type'] === 'text') {
+          const text = block['text']
           results.push({
             id: nextId(),
             role: 'assistant',
-            content: block['text'] as string,
+            content: typeof text === 'string' ? text : JSON.stringify(text),
             timestamp: Date.now(),
           })
         }
 
         if (block['type'] === 'tool_use') {
+          const toolName = block['name'] as string
+          const toolUseId = block['id'] as string | undefined
           const input = block['input'] as Record<string, unknown>
           const display = input['command'] as string
             ?? input['file_path'] as string
@@ -153,7 +157,8 @@ export class ClaudeSession extends EventEmitter {
           results.push({
             id: nextId(),
             role: 'tool',
-            toolName: block['name'] as string,
+            toolName,
+            toolUseId,
             input: display,
             output: null,
             isError: false,
@@ -180,7 +185,8 @@ export class ClaudeSession extends EventEmitter {
           results.push({
             id: nextId(),
             role: 'tool',
-            toolName: '→ result',
+            toolName: TOOL_RESULT_NAME,
+            toolUseId: block['tool_use_id'] as string | undefined,
             input: '',
             output: truncated,
             isError: block['is_error'] as boolean,
