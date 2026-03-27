@@ -20,7 +20,10 @@ type SidebarView = 'projects' | 'sessions'
 export default function Dashboard() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(true)
+  const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false)
+  // Agent panel feature is implemented but hidden from the UI for now.
+  // Set NEXT_PUBLIC_ENABLE_AGENT_PANEL=true to re-enable.
+  const isAgentPanelEnabled = process.env.NEXT_PUBLIC_ENABLE_AGENT_PANEL === 'true'
   const [sessionSettings, setSessionSettings] = useState<SessionSettings>(() => {
     if (typeof window === 'undefined') return DEFAULT_SESSION_SETTINGS
     try {
@@ -210,20 +213,22 @@ export default function Dashboard() {
               </svg>
             )}
           </button>
-          {/* Agent panel toggle */}
-          <button
-            onClick={() => setIsAgentPanelOpen((prev) => !prev)}
-            className="p-2 rounded-lg transition-colors hover:opacity-80"
-            style={{ color: isAgentPanelOpen ? 'var(--foreground)' : 'var(--content-muted)' }}
-            aria-label="Toggle agent panel"
-          >
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-              <rect x="1.5" y="2.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
-              <rect x="9.5" y="2.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
-              <rect x="1.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
-              <rect x="9.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
-            </svg>
-          </button>
+          {/* Agent panel toggle — hidden unless NEXT_PUBLIC_ENABLE_AGENT_PANEL=true */}
+          {isAgentPanelEnabled && (
+            <button
+              onClick={() => setIsAgentPanelOpen((prev) => !prev)}
+              className="p-2 rounded-lg transition-colors hover:opacity-80"
+              style={{ color: isAgentPanelOpen ? 'var(--foreground)' : 'var(--content-muted)' }}
+              aria-label="Toggle agent panel"
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                <rect x="1.5" y="2.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                <rect x="9.5" y="2.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                <rect x="1.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+                <rect x="9.5" y="9.5" width="5" height="5" rx="1" stroke="currentColor" strokeWidth="1.3" />
+              </svg>
+            </button>
+          )}
         </div>
       </header>
 
@@ -286,7 +291,7 @@ export default function Dashboard() {
           />
         </main>
 
-        {isAgentPanelOpen && (
+        {isAgentPanelEnabled && isAgentPanelOpen && (
           <aside
             className="shrink-0"
             style={{
