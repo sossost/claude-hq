@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import type { ChatMessage, Project, PersistedSession, SessionSettings } from '@/types/events'
+import type { ChatMessage, Project, PersistedSession, SessionSettings, SendOptions } from '@/types/events'
 
 const ASSISTANT_CHUNK_MERGE_WINDOW_MS = 500
 const SSE_DATA_PREFIX = 'data: '
@@ -9,6 +9,7 @@ const SSE_DATA_PREFIX = 'data: '
 interface UseChatOptions {
   project: Project | null
   settings?: SessionSettings
+  onSessionCreated?: (sessionId: string) => void
 }
 
 interface UseChatReturn {
@@ -18,13 +19,14 @@ interface UseChatReturn {
   claudeSessionId: string | null
   activeModel: string | null
   activePermissionMode: string | null
-  send: (prompt: string) => void
+  send: (prompt: string, options?: SendOptions) => void
   stop: () => void
   clear: () => void
+  clearMessages: () => void
   loadSession: (session: PersistedSession) => void
 }
 
-export function useChat({ project, settings }: UseChatOptions): UseChatReturn {
+export function useChat({ project, settings, onSessionCreated }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isRunning, setIsRunning] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
@@ -50,16 +52,17 @@ export function useChat({ project, settings }: UseChatOptions): UseChatReturn {
       throw new Error('Failed to create session')
     }
     setSessionId(newId)
+    onSessionCreated?.(newId)
     return newId
-  }, [sessionId, project])
+  }, [sessionId, project, onSessionCreated])
 
-  const send = useCallback(async (prompt: string) => {
+  const send = useCallback(async (prompt: string, options?: SendOptions) => {
     if (project == null) return
 
     const userMsg: ChatMessage = {
       id: `user-${Date.now()}`,
       role: 'user',
-      content: prompt,
+      content: options?.displayContent ?? prompt,
       timestamp: Date.now(),
     }
     setMessages((prev) => [...prev, userMsg])
@@ -199,11 +202,27 @@ export function useChat({ project, settings }: UseChatOptions): UseChatReturn {
     setActivePermissionMode(null)
   }, [])
 
+  const clearMessages = useCallback(() => {
+    setMessages([])
+    setClaudeSessionId(null)
+
+    // Persist clear to session store
+    if (sessionId != null) {
+      fetch('/api/sessions', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: sessionId, clear: true }),
+      }).catch(() => {
+        // Non-fatal
+      })
+    }
+  }, [sessionId])
+
   const loadSession = useCallback((session: PersistedSession) => {
     setSessionId(session.id)
     setClaudeSessionId(session.claudeSessionId)
     setMessages(session.messages)
   }, [])
 
-  return { messages, isRunning, sessionId, claudeSessionId, activeModel, activePermissionMode, send, stop, clear, loadSession }
+  return { messages, isRunning, sessionId, claudeSessionId, activeModel, activePermissionMode, send, stop, clear, clearMessages, loadSession }
 }

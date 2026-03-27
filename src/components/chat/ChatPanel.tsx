@@ -1,6 +1,6 @@
 'use client'
 
-import type { ChatMessage, SessionSettings } from '@/types/events'
+import type { ChatMessage, SessionSettings, SendOptions, CommandDefinition } from '@/types/events'
 import type { ClaudeDefaults } from '@/lib/useClaudeConfig'
 import { ChatMessages } from './ChatMessages'
 import { ChatInput } from './ChatInput'
@@ -16,11 +16,13 @@ interface ChatPanelProps {
   activePermissionMode: string | null
   claudeDefaults: ClaudeDefaults
   onSettingsChange: (settings: SessionSettings) => void
-  onSend: (message: string) => void
+  onSend: (message: string, options?: SendOptions) => void
   onStop: () => void
+  onBuiltinCommand: (name: string, args: string) => void
+  commands: CommandDefinition[]
 }
 
-export function ChatPanel({ messages, isRunning, hasProject, projectName, settings, activeModel, activePermissionMode, claudeDefaults, onSettingsChange, onSend, onStop }: ChatPanelProps) {
+export function ChatPanel({ messages, isRunning, hasProject, projectName, settings, activeModel, activePermissionMode, claudeDefaults, onSettingsChange, onSend, onStop, onBuiltinCommand, commands }: ChatPanelProps) {
   return (
     <>
       <ChatMessages messages={messages} isRunning={isRunning} projectName={projectName} />
@@ -35,7 +37,7 @@ export function ChatPanel({ messages, isRunning, hasProject, projectName, settin
         <div className="px-4 pt-2 pb-1">
           <SettingsPanel settings={settings} activeModel={activeModel} activePermissionMode={activePermissionMode} claudeDefaults={claudeDefaults} onChange={onSettingsChange} />
         </div>
-        <ChatInput onSend={onSend} onStop={onStop} isRunning={isRunning} disabled={!hasProject} />
+        <ChatInput onSend={onSend} onStop={onStop} onBuiltinCommand={onBuiltinCommand} isRunning={isRunning} disabled={hasProject === false} commands={commands} />
       </div>
     </>
   )

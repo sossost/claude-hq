@@ -51,6 +51,22 @@ export async function deleteSession(id: string): Promise<void> {
   await writeAllSessions(filtered)
 }
 
+export async function clearSessionMessages(sessionId: string): Promise<void> {
+  const sessions = await readAllSessions()
+  const session = sessions.find((s) => s.id === sessionId)
+  if (session == null) return
+
+  const updated: PersistedSession = {
+    ...session,
+    messages: [],
+    claudeSessionId: null,
+    updatedAt: Date.now(),
+  }
+
+  const next = sessions.map((s) => s.id === sessionId ? updated : s)
+  await writeAllSessions(next)
+}
+
 export async function appendMessages(
   sessionId: string,
   messages: ChatMessage[],

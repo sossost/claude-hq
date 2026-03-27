@@ -5,6 +5,7 @@ import {
   saveSession,
   deleteSession,
   appendMessages,
+  clearSessionMessages,
 } from '@/lib/sessionStore'
 import { ok, err } from '@/lib/apiResponse'
 import type { PersistedSession } from '@/types/events'
@@ -73,15 +74,22 @@ export async function POST(request: NextRequest) {
   return ok({ session })
 }
 
-/** PATCH /api/sessions — Append messages to an existing session */
+/** PATCH /api/sessions — Append messages or clear a session */
 export async function PATCH(request: NextRequest) {
   const body = await request.json()
   const id = typeof body.id === 'string' ? body.id : ''
-  const messages = Array.isArray(body.messages) ? body.messages : null
 
   if (id === '') {
     return err('VALIDATION_ERROR', 'id is required')
   }
+
+  // Clear messages mode
+  if (body.clear === true) {
+    await clearSessionMessages(id)
+    return ok({ cleared: true })
+  }
+
+  const messages = Array.isArray(body.messages) ? body.messages : null
   if (messages == null || messages.every(isValidMessage) === false) {
     return err('VALIDATION_ERROR', 'messages must be a valid ChatMessage array')
   }

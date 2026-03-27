@@ -21,7 +21,7 @@ export function ChatEmptyState({ projectName }: ChatEmptyStateProps) {
         </div>
         <div>
           <div className="text-base font-medium" style={{ color: 'var(--foreground)' }}>
-            {projectName ?? 'Claude HQ'}
+            {projectName ?? 'Claude'}
           </div>
           <div className="text-sm mt-1" style={{ color: 'var(--content-muted)' }}>
             Ask anything about this project

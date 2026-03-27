@@ -190,11 +190,40 @@ export interface AgentTaskKpi {
   error: number
 }
 
+// ─── Command Definition ──────────────────────────────
+
+export type CommandSource = 'project' | 'global' | 'builtin'
+
+export interface CommandDefinition {
+  name: string
+  description: string
+  template: string
+  source: CommandSource
+}
+
+// ─── Send Options ────────────────────────────────────
+
+export interface SendOptions {
+  displayContent?: string
+}
+
 // ─── Session Settings ─────────────────────────────────
 
 export type ModelOption = 'opus' | 'sonnet' | 'haiku'
 export type EffortLevel = 'low' | 'medium' | 'high' | 'max'
 export type PermissionMode = 'default' | 'auto' | 'plan'
+
+export function isModelOption(v: string): v is ModelOption {
+  return v === 'opus' || v === 'sonnet' || v === 'haiku'
+}
+
+export function isEffortLevel(v: string): v is EffortLevel {
+  return v === 'low' || v === 'medium' || v === 'high' || v === 'max'
+}
+
+export function isPermissionMode(v: string): v is PermissionMode {
+  return v === 'default' || v === 'auto' || v === 'plan'
+}
 
 export interface SessionSettings {
   model: ModelOption | null

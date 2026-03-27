@@ -1,11 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { isModelOption, isEffortLevel, isPermissionMode } from '@/types/events'
 import { useChat } from '@/lib/useChat'
 import { useTheme } from '@/lib/useTheme'
 import { useProjects } from '@/lib/useProjects'
 import { useSessions } from '@/lib/useSessions'
 import { useAgents } from '@/lib/useAgents'
+import { useCommands } from '@/lib/useCommands'
 import { useAgentTasks } from '@/lib/useAgentTasks'
 import { useClaudeConfig } from '@/lib/useClaudeConfig'
 import { useSessionSettings } from '@/lib/useSessionSettings'
@@ -47,10 +49,6 @@ export default function Dashboard() {
     onRemove: removeProject,
   })
 
-  const chat = useChat({ project: selectedProject, settings })
-  const { agents, isLoading: agentsLoading } = useAgents({ projectPath: selectedProject?.path ?? null })
-  const { tasks: agentTasks, kpi: agentKpi } = useAgentTasks(chat.messages, chat.isRunning)
-
   const {
     sessions,
     activeSessionId,
@@ -59,6 +57,16 @@ export default function Dashboard() {
     setActiveSessionId,
     refresh: refreshSessions,
   } = useSessions({ projectPath: selectedProject?.path ?? null })
+
+  const handleSessionCreated = useCallback((newSessionId: string) => {
+    setActiveSessionId(newSessionId)
+    refreshSessions()
+  }, [setActiveSessionId, refreshSessions])
+
+  const chat = useChat({ project: selectedProject, settings, onSessionCreated: handleSessionCreated })
+  const { agents, isLoading: agentsLoading } = useAgents({ projectPath: selectedProject?.path ?? null })
+  const { commands } = useCommands({ projectPath: selectedProject?.path ?? null })
+  const { tasks: agentTasks, kpi: agentKpi } = useAgentTasks(chat.messages, chat.isRunning)
 
   const {
     handleSessionSelect,
@@ -75,6 +83,35 @@ export default function Dashboard() {
     clear: chat.clear,
     refreshSessions,
   })
+
+  const handleBuiltinCommand = useCallback((name: string, args: string) => {
+    const arg = args.trim()
+    switch (name) {
+      case 'clear':
+        chat.clearMessages()
+        break
+      case 'new':
+        handleNewSession()
+        break
+      case 'model':
+        if (isModelOption(arg)) {
+          updateSettings({ ...settings, model: arg })
+        }
+        break
+      case 'effort':
+        if (isEffortLevel(arg)) {
+          updateSettings({ ...settings, effort: arg })
+        }
+        break
+      case 'permission':
+        if (isPermissionMode(arg)) {
+          updateSettings({ ...settings, permissionMode: arg })
+        }
+        break
+      default:
+        break
+    }
+  }, [settings, updateSettings, chat.clearMessages, handleNewSession])
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
@@ -209,6 +246,8 @@ export default function Dashboard() {
             onSettingsChange={updateSettings}
             onSend={chat.send}
             onStop={chat.stop}
+            onBuiltinCommand={handleBuiltinCommand}
+            commands={commands}
           />
         </main>
 
