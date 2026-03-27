@@ -116,21 +116,20 @@ async function scanAgentsDir(dir: string, source: AgentSource): Promise<AgentDef
     return []
   }
 
-  const agents: AgentDefinition[] = []
-
-  for (const file of files) {
-    try {
-      const content = await readFile(join(dir, file), 'utf-8')
-      const parsed = parseFrontmatter(content, source)
-      if (parsed != null) {
-        agents.push(parsed)
+  const results = await Promise.all(
+    files.map(async (file) => {
+      try {
+        const content = await readFile(join(dir, file), 'utf-8')
+        return parseFrontmatter(content, source)
+      } catch {
+        return null
       }
-    } catch {
-      // Skip unreadable files
-    }
-  }
+    }),
+  )
 
-  return agents.sort((a, b) => a.name.localeCompare(b.name))
+  return results
+    .filter((a): a is AgentDefinition => a != null)
+    .sort((a, b) => a.name.localeCompare(b.name))
 }
 
 function parseFrontmatter(content: string, source: AgentSource): AgentDefinition | null {

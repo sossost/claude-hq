@@ -29,7 +29,7 @@ export function useAgents({ projectPath }: UseAgentsOptions): UseAgentsReturn {
         if (res.ok === false) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
-      .then((data) => setAgents(Array.isArray(data?.agents) ? data.agents : []))
+      .then((data) => setAgents(Array.isArray(data?.data?.agents) ? data.data.agents : []))
       .catch(() => setAgents([]))
       .finally(() => setIsLoading(false))
   }, [projectPath])

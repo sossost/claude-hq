@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import {
   listSessions,
   getSession,
@@ -6,6 +6,7 @@ import {
   deleteSession,
   appendMessages,
 } from '@/lib/sessionStore'
+import { ok, err } from '@/lib/apiResponse'
 import type { PersistedSession } from '@/types/events'
 
 export const dynamic = 'force-dynamic'
@@ -27,25 +28,24 @@ function isValidMessage(msg: unknown): boolean {
 export async function GET(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id')
 
-  if (id != null && id !== '') {
-    const session = await getSession(id)
-    if (session == null) {
-      return NextResponse.json({ error: 'Session not found' }, { status: 404 })
-    }
-    return NextResponse.json({ session })
+  if (id === '') {
+    return err('VALIDATION_ERROR', 'id must not be empty')
   }
 
-  if (id === '') {
-    return NextResponse.json({ error: 'id must not be empty' }, { status: 400 })
+  if (id != null) {
+    const session = await getSession(id)
+    if (session == null) {
+      return err('NOT_FOUND', 'Session not found', 404)
+    }
+    return ok({ session })
   }
 
   const sessions = await listSessions()
-  // Omit messages from list response (lightweight)
   const summaries = sessions.map(({ messages, ...rest }) => ({
     ...rest,
     messageCount: messages.length,
   }))
-  return NextResponse.json({ sessions: summaries })
+  return ok({ sessions: summaries })
 }
 
 /** POST /api/sessions — Create a new session */
@@ -55,11 +55,11 @@ export async function POST(request: NextRequest) {
   const projectName = typeof body.projectName === 'string' ? body.projectName : ''
 
   if (projectPath === '') {
-    return NextResponse.json({ error: 'projectPath is required' }, { status: 400 })
+    return err('VALIDATION_ERROR', 'projectPath is required')
   }
 
   const session: PersistedSession = {
-    id: `session-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    id: `session-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`,
     claudeSessionId: null,
     projectPath,
     projectName: projectName !== '' ? projectName : projectPath.split('/').pop() ?? 'unknown',
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
   }
 
   await saveSession(session)
-  return NextResponse.json({ session })
+  return ok({ session })
 }
 
 /** PATCH /api/sessions — Append messages to an existing session */
@@ -80,14 +80,14 @@ export async function PATCH(request: NextRequest) {
   const messages = Array.isArray(body.messages) ? body.messages : null
 
   if (id === '') {
-    return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    return err('VALIDATION_ERROR', 'id is required')
   }
-  if (messages == null || !messages.every(isValidMessage)) {
-    return NextResponse.json({ error: 'messages must be a valid ChatMessage array' }, { status: 400 })
+  if (messages == null || messages.every(isValidMessage) === false) {
+    return err('VALIDATION_ERROR', 'messages must be a valid ChatMessage array')
   }
 
   await appendMessages(id, messages, null)
-  return NextResponse.json({ success: true })
+  return ok({ appended: true })
 }
 
 /** DELETE /api/sessions?id=xxx — Delete a session */
@@ -95,9 +95,9 @@ export async function DELETE(request: NextRequest) {
   const id = request.nextUrl.searchParams.get('id')
 
   if (id == null || id === '') {
-    return NextResponse.json({ error: 'id is required' }, { status: 400 })
+    return err('VALIDATION_ERROR', 'id is required')
   }
 
   await deleteSession(id)
-  return NextResponse.json({ success: true })
+  return ok({ deleted: true })
 }

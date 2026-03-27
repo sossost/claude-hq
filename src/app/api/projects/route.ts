@@ -1,7 +1,8 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { listProjects } from '@/lib/projectStore'
 import { getImportedProjects, importProject, removeProject } from '@/lib/workspaceStore'
 import { assertSafePath, PathValidationError } from '@/lib/pathValidator'
+import { ok, err } from '@/lib/apiResponse'
 
 export const dynamic = 'force-dynamic'
 
@@ -15,12 +16,12 @@ export async function GET(req: NextRequest) {
   if (isAvailable) {
     const [all, imported] = await Promise.all([listProjects(), getImportedProjects()])
     const importedPaths = new Set(imported.map((p) => p.path))
-    const available = all.filter((p) => !importedPaths.has(p.path))
-    return NextResponse.json({ projects: available })
+    const available = all.filter((p) => importedPaths.has(p.path) === false)
+    return ok({ projects: available })
   }
 
   const projects = await getImportedProjects()
-  return NextResponse.json({ projects })
+  return ok({ projects })
 }
 
 /** POST /api/projects — import a project { path } */
@@ -29,21 +30,21 @@ export async function POST(req: NextRequest) {
   const rawPath: unknown = body.path
 
   if (typeof rawPath !== 'string' || rawPath === '') {
-    return NextResponse.json({ error: 'path is required' }, { status: 400 })
+    return err('VALIDATION_ERROR', 'path is required')
   }
 
   let safePath: string
   try {
     safePath = assertSafePath(rawPath)
-  } catch (err) {
-    if (err instanceof PathValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 400 })
+  } catch (e) {
+    if (e instanceof PathValidationError) {
+      return err('VALIDATION_ERROR', e.message)
     }
-    throw err
+    throw e
   }
 
   const project = await importProject(safePath)
-  return NextResponse.json({ project })
+  return ok({ project })
 }
 
 /** DELETE /api/projects?path=... — remove from workspace */
@@ -51,9 +52,9 @@ export async function DELETE(req: NextRequest) {
   const path = req.nextUrl.searchParams.get('path')
 
   if (path == null || path === '') {
-    return NextResponse.json({ error: 'path is required' }, { status: 400 })
+    return err('VALIDATION_ERROR', 'path is required')
   }
 
   await removeProject(path)
-  return NextResponse.json({ success: true })
+  return ok({ removed: true })
 }

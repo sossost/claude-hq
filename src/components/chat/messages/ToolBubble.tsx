@@ -32,6 +32,8 @@ export function ToolBubble({ message }: ToolBubbleProps) {
           onClick={() => setIsOpen((prev) => !prev)}
           className="flex items-center gap-2 px-3 py-2 w-full text-left"
           style={{ background: 'var(--chat-tool-header)' }}
+          aria-expanded={isOpen}
+          aria-label={isOpen ? 'Collapse tool result' : 'Expand tool result'}
         >
           <span
             className="transition-transform duration-200 text-[10px]"
@@ -77,6 +79,8 @@ export function ToolBubble({ message }: ToolBubbleProps) {
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex items-center gap-2 px-3 py-2 w-full text-left"
         style={{ background: 'var(--chat-tool-header)' }}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? `Collapse ${message.toolName}` : `Expand ${message.toolName}`}
       >
         <svg
           width="10"

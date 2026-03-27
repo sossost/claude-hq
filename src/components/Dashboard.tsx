@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState } from 'react'
 import { useChat } from '@/lib/useChat'
 import { useTheme } from '@/lib/useTheme'
 import { useProjects } from '@/lib/useProjects'
@@ -8,14 +8,13 @@ import { useSessions } from '@/lib/useSessions'
 import { useAgents } from '@/lib/useAgents'
 import { useAgentTasks } from '@/lib/useAgentTasks'
 import { useClaudeConfig } from '@/lib/useClaudeConfig'
+import { useSessionSettings } from '@/lib/useSessionSettings'
+import { useProjectPersistence } from '@/lib/useProjectPersistence'
+import { useSessionAutoSelect } from '@/lib/useSessionAutoSelect'
 import { ChatPanel } from '@/components/chat'
 import { ProjectList } from '@/components/project'
 import { SessionList } from '@/components/session'
 import { AgentPanel } from '@/components/agent'
-import type { Project, SessionSettings } from '@/types/events'
-import { DEFAULT_SESSION_SETTINGS } from '@/types/events'
-
-type SidebarView = 'projects' | 'sessions'
 
 const SIDEBAR_PANEL_COUNT = 2
 const SIDEBAR_SLIDE_WIDTH = `${SIDEBAR_PANEL_COUNT * 100}%`
@@ -26,137 +25,56 @@ const AGENT_PANEL_MAX_WIDTH = '36rem'
 const IS_AGENT_PANEL_ENABLED = process.env.NEXT_PUBLIC_ENABLE_AGENT_PANEL === 'true'
 
 export default function Dashboard() {
-  const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false)
-  const [sessionSettings, setSessionSettings] = useState<SessionSettings>(() => {
-    if (typeof window === 'undefined') return DEFAULT_SESSION_SETTINGS
-    try {
-      const saved = localStorage.getItem('sessionSettings')
-      if (saved != null) return JSON.parse(saved) as SessionSettings
-    } catch {
-      // Parse failure — use defaults
-    }
-    return DEFAULT_SESSION_SETTINGS
-  })
-  const [sidebarView, setSidebarView] = useState<SidebarView>('projects')
-  const handleSettingsChange = useCallback((next: SessionSettings) => {
-    setSessionSettings(next)
-    localStorage.setItem('sessionSettings', JSON.stringify(next))
-  }, [])
 
+  const { settings, updateSettings } = useSessionSettings()
   const { projects, isLoading: projectsLoading, importProject, removeProject } = useProjects()
-  const { messages, isRunning, activeModel, activePermissionMode, send, stop, clear, loadSession } = useChat({
-    project: selectedProject,
-    settings: sessionSettings,
-  })
   const { toggle, theme } = useTheme()
   const claudeDefaults = useClaudeConfig()
+
+  // Project persistence needs clear from chat, but chat needs project from persistence.
+  // Break the cycle: persistence tracks selectedProject, chat consumes it.
+  const {
+    selectedProject,
+    sidebarView,
+    setSidebarView,
+    handleProjectSelect,
+    handleProjectRemove,
+  } = useProjectPersistence({
+    projects,
+    onClear: () => chat.clear(),
+    onRemove: removeProject,
+  })
+
+  const chat = useChat({ project: selectedProject, settings })
   const { agents, isLoading: agentsLoading } = useAgents({ projectPath: selectedProject?.path ?? null })
-  const { tasks: agentTasks, kpi: agentKpi } = useAgentTasks(messages, isRunning)
+  const { tasks: agentTasks, kpi: agentKpi } = useAgentTasks(chat.messages, chat.isRunning)
+
   const {
     sessions,
     activeSessionId,
-    createSession: createSessionRaw,
-    selectSession: selectSessionRaw,
-    deleteSession: deleteSessionRaw,
+    selectSession,
+    deleteSession,
     setActiveSessionId,
     refresh: refreshSessions,
   } = useSessions({ projectPath: selectedProject?.path ?? null })
 
-  // Restore last used project
-  useEffect(() => {
-    if (projects.length === 0) return
-
-    const lastPath = localStorage.getItem('lastProjectPath')
-    if (lastPath != null) {
-      const found = projects.find((p) => p.path === lastPath)
-      if (found != null) {
-        setSelectedProject(found)
-        setSidebarView('sessions')
-        return
-      }
-    }
-
-    setSelectedProject(projects[0])
-    setSidebarView('sessions')
-  }, [projects])
-
-  // Auto-select most recent session when project changes
-  // userClearedRef prevents auto-select after explicit "New Session" click
-  const userClearedRef = useRef(false)
-
-  useEffect(() => {
-    userClearedRef.current = false
-  }, [selectedProject?.path])
-
-  useEffect(() => {
-    if (userClearedRef.current) return
-    const currentPath = selectedProject?.path ?? null
-    if (currentPath == null) return
-    if (activeSessionId != null) return
-
-    const projectSessions = sessions.filter((s) => s.projectPath === currentPath)
-    const mostRecent = projectSessions.find((s) => s.messageCount > 0)
-    if (mostRecent == null) return
-
-    selectSessionRaw(mostRecent.id).then((session) => {
-      if (session != null) {
-        loadSession(session)
-      }
-    })
-  }, [selectedProject?.path, sessions, activeSessionId, selectSessionRaw, loadSession])
-
-  const handleProjectSelect = useCallback((project: Project) => {
-    const isSameProject = project.path === selectedProject?.path
-    if (isSameProject === false) {
-      setSelectedProject(project)
-      localStorage.setItem('lastProjectPath', project.path)
-      clear()
-    }
-    setSidebarView('sessions')
-  }, [selectedProject?.path, clear])
-
-  const handleProjectRemove = useCallback(async (path: string) => {
-    await removeProject(path)
-    if (selectedProject?.path === path) {
-      setSelectedProject(null)
-      setSidebarView('projects')
-      clear()
-    }
-  }, [selectedProject?.path, removeProject, clear])
-
-  const handleSessionSelect = useCallback(async (id: string) => {
-    if (id === activeSessionId) return
-    const session = await selectSessionRaw(id)
-    if (session != null) {
-      loadSession(session)
-    }
-  }, [activeSessionId, selectSessionRaw, loadSession])
-
-  const handleSessionDelete = useCallback(async (id: string) => {
-    await deleteSessionRaw(id)
-    if (id === activeSessionId) {
-      clear()
-    }
-  }, [activeSessionId, deleteSessionRaw, clear])
-
-  const handleNewSession = useCallback(() => {
-    userClearedRef.current = true
-    clear()
-    setActiveSessionId(null)
-  }, [clear, setActiveSessionId])
-
-  // Refresh session list after chat completes (title may have updated)
-  const wasRunningRef = useRef(false)
-  useEffect(() => {
-    if (wasRunningRef.current && !isRunning) {
-      refreshSessions()
-    }
-    wasRunningRef.current = isRunning
-  }, [isRunning, refreshSessions])
-
-  const hasProject = selectedProject != null
+  const {
+    handleSessionSelect,
+    handleSessionDelete,
+    handleNewSession,
+  } = useSessionAutoSelect({
+    projectPath: selectedProject?.path ?? null,
+    sessions,
+    activeSessionId,
+    isRunning: chat.isRunning,
+    selectSession,
+    loadSession: chat.loadSession,
+    setActiveSessionId,
+    clear: chat.clear,
+    refreshSessions,
+  })
 
   return (
     <div className="h-screen flex flex-col" style={{ background: 'var(--background)' }}>
@@ -188,7 +106,7 @@ export default function Dashboard() {
           )}
         </div>
         <div className="flex items-center gap-1">
-          {isRunning && (
+          {chat.isRunning && (
             <span
               className="inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full mr-1"
               style={{ color: 'var(--success)', background: 'var(--success-muted)' }}
@@ -200,7 +118,6 @@ export default function Dashboard() {
               Running
             </span>
           )}
-          {/* Theme toggle */}
           <button
             onClick={toggle}
             className="p-2 rounded-lg transition-colors hover:opacity-80"
@@ -218,7 +135,6 @@ export default function Dashboard() {
               </svg>
             )}
           </button>
-          {/* Agent panel toggle — hidden unless NEXT_PUBLIC_ENABLE_AGENT_PANEL=true */}
           {IS_AGENT_PANEL_ENABLED && (
             <button
               onClick={() => setIsAgentPanelOpen((prev) => !prev)}
@@ -270,7 +186,7 @@ export default function Dashboard() {
                     sessions={sessions}
                     activeSessionId={activeSessionId}
                     onSelect={handleSessionSelect}
-                    onDelete={handleSessionDelete}
+                    onDelete={(id) => handleSessionDelete(id, deleteSession)}
                     onNewSession={handleNewSession}
                     onBack={() => setSidebarView('projects')}
                   />
@@ -282,17 +198,17 @@ export default function Dashboard() {
 
         <main className="flex-1 flex flex-col min-w-0">
           <ChatPanel
-            messages={messages}
-            isRunning={isRunning}
-            hasProject={hasProject}
+            messages={chat.messages}
+            isRunning={chat.isRunning}
+            hasProject={selectedProject != null}
             projectName={selectedProject?.name}
-            settings={sessionSettings}
-            activeModel={activeModel}
-            activePermissionMode={activePermissionMode}
+            settings={settings}
+            activeModel={chat.activeModel}
+            activePermissionMode={chat.activePermissionMode}
             claudeDefaults={claudeDefaults}
-            onSettingsChange={handleSettingsChange}
-            onSend={send}
-            onStop={stop}
+            onSettingsChange={updateSettings}
+            onSend={chat.send}
+            onStop={chat.stop}
           />
         </main>
 

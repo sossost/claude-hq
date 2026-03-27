@@ -67,7 +67,6 @@ export function SessionList({
         {sessions.map((session) => (
           <SessionItem
             key={session.id}
-            id={session.id}
             title={session.title}
             messageCount={session.messageCount}
             updatedAt={session.updatedAt}

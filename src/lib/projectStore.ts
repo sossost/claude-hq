@@ -20,17 +20,12 @@ export async function listProjects(): Promise<Project[]> {
   }
 
   const entries = await readdir(CLAUDE_PROJECTS_DIR, { withFileTypes: true })
-  const dirs = entries.filter((e) => e.isDirectory())
 
-  const projects: Project[] = []
-
-  for (const dir of dirs) {
-    const realPath = decodeFolderName(dir.name)
-    if (realPath == null) continue
-
-    const name = extractProjectName(realPath)
-    projects.push({ name, path: realPath, exists: true })
-  }
+  const projects = entries
+    .filter((e) => e.isDirectory())
+    .map((dir) => decodeFolderName(dir.name))
+    .filter((path): path is string => path != null)
+    .map((path) => ({ name: extractProjectName(path), path, exists: true }))
 
   return projects.sort((a, b) => a.name.localeCompare(b.name))
 }

@@ -38,8 +38,8 @@ export async function saveSession(session: PersistedSession): Promise<void> {
     ? sessions.map((s, i) => i === idx ? session : s)
     : [...sessions, session]
 
-  const trimmed = [...next]
-    .sort((a, b) => b.updatedAt - a.updatedAt)
+  const trimmed = next
+    .toSorted((a, b) => b.updatedAt - a.updatedAt)
     .slice(0, MAX_SESSIONS)
 
   await writeAllSessions(trimmed)

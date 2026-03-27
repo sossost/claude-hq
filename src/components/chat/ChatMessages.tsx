@@ -29,7 +29,7 @@ export function ChatMessages({ messages, isRunning, projectName }: ChatMessagesP
   )
 
   return (
-    <div className="flex-1 overflow-y-auto py-6 space-y-3">
+    <div className="flex-1 overflow-y-auto py-6 space-y-3" role="log" aria-live="polite" aria-label="Chat messages">
       {messages.length === 0 && <ChatEmptyState projectName={projectName} />}
 
       {messages.map((msg, index) => {

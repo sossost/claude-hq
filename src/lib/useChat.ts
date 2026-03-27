@@ -45,7 +45,7 @@ export function useChat({ project, settings }: UseChatOptions): UseChatReturn {
       }),
     })
     const data = await res.json()
-    const newId = data?.session?.id
+    const newId = data?.data?.session?.id
     if (typeof newId !== 'string') {
       throw new Error('Failed to create session')
     }

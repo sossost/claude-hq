@@ -18,7 +18,7 @@ export function ProjectImportDialog({ onImport, onClose }: ProjectImportDialogPr
   useEffect(() => {
     fetch('/api/projects?available=1')
       .then((res) => res.json())
-      .then((data) => setAvailable(data.projects ?? []))
+      .then((data) => setAvailable(Array.isArray(data?.data?.projects) ? data.data.projects : []))
       .catch(() => setAvailable([]))
       .finally(() => setIsLoading(false))
   }, [])
@@ -76,6 +76,7 @@ export function ProjectImportDialog({ onImport, onClose }: ProjectImportDialogPr
             onClick={onClose}
             className="p-1 rounded transition-colors"
             style={{ color: 'var(--content-muted)' }}
+            aria-label="Close dialog"
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
@@ -105,7 +106,7 @@ export function ProjectImportDialog({ onImport, onClose }: ProjectImportDialogPr
             </div>
           )}
 
-          {!isLoading && filtered.length === 0 && (
+          {isLoading === false && filtered.length === 0 && (
             <div className="px-4 py-8 text-center text-xs" style={{ color: 'var(--content-muted)' }}>
               {available.length === 0 ? 'No projects available to import' : 'No matching projects'}
             </div>

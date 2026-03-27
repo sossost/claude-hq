@@ -1,7 +1,6 @@
 'use client'
 
 interface SessionItemProps {
-  id: string
   title: string
   messageCount: number
   updatedAt: number
@@ -47,7 +46,7 @@ export function SessionItem({
         }}
         className="shrink-0 p-1 rounded opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity"
         style={{ color: 'var(--content-muted)' }}
-        aria-label="Delete session"
+        aria-label={`Delete session: ${title}`}
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
           <path d="M3 3l6 6M9 3l-6 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />

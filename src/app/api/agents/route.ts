@@ -1,6 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
 import { listAgents } from '@/lib/agentStore'
 import { assertSafePath } from '@/lib/pathValidator'
+import { ok, err } from '@/lib/apiResponse'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,10 +13,10 @@ export async function GET(request: NextRequest) {
     try {
       assertSafePath(projectPath)
     } catch {
-      return NextResponse.json({ error: 'Invalid project path' }, { status: 400 })
+      return err('VALIDATION_ERROR', 'Invalid project path')
     }
   }
 
   const agents = await listAgents(projectPath ?? undefined)
-  return NextResponse.json({ agents })
+  return ok({ agents })
 }

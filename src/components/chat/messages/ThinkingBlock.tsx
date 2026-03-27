@@ -34,6 +34,8 @@ export function ThinkingBlock({ content, isStreaming = false }: ThinkingBlockPro
         onClick={() => setIsOpen((prev) => !prev)}
         className="flex items-center gap-1.5 w-full px-3 py-2 text-left transition-colors"
         style={{ color: 'var(--content-muted)' }}
+        aria-expanded={isOpen}
+        aria-label={isOpen ? 'Collapse thinking' : 'Expand thinking'}
       >
         <svg
           width="10"

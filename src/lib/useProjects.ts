@@ -17,7 +17,7 @@ export function useProjects(): UseProjectsReturn {
   const fetchProjects = useCallback(() => {
     fetch('/api/projects')
       .then((res) => res.json())
-      .then((data) => setProjects(data.projects ?? []))
+      .then((data) => setProjects(Array.isArray(data?.data?.projects) ? data.data.projects : []))
       .catch(() => setProjects([]))
       .finally(() => setIsLoading(false))
   }, [])
@@ -33,8 +33,8 @@ export function useProjects(): UseProjectsReturn {
       body: JSON.stringify({ path }),
     })
     const data = await res.json()
-    if (data.project != null) {
-      setProjects((prev) => [...prev, data.project])
+    if (data?.data?.project != null) {
+      setProjects((prev) => [...prev, data.data.project])
     }
   }, [])
 

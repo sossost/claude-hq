@@ -1,8 +1,8 @@
-import { NextResponse } from 'next/server'
 import { readFile } from 'fs/promises'
 import { spawn } from 'child_process'
 import { join } from 'path'
 import { homedir } from 'os'
+import { ok } from '@/lib/apiResponse'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,16 +12,19 @@ interface ClaudeDefaults {
   permissionMode: string | null
 }
 
+const CACHE_TTL_MS = 5 * 60_000
+const PROBE_TIMEOUT_MS = 10_000
+const PROBE_MAX_BUDGET_USD = '0.01'
+
 // In-memory cache — survives across requests within the same server process
 let cachedDefaults: ClaudeDefaults | null = null
 let cacheTimestamp = 0
-const CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 
 export async function GET() {
   const now = Date.now()
 
   if (cachedDefaults != null && now - cacheTimestamp < CACHE_TTL_MS) {
-    return NextResponse.json(cachedDefaults)
+    return ok(cachedDefaults)
   }
 
   const home = homedir()
@@ -56,13 +59,18 @@ export async function GET() {
 
   cachedDefaults = defaults
   cacheTimestamp = now
-  return NextResponse.json(defaults)
+  return ok(defaults)
 }
 
 function probeCliDefaults(cwd: string): Promise<{ model: string | null; permissionMode: string | null }> {
   return new Promise((resolve) => {
     const result = { model: null as string | null, permissionMode: null as string | null }
-    const proc = spawn('claude', ['-p', 'hi', '--output-format', 'stream-json', '--verbose', '--max-budget-usd', '0.01'], {
+    const proc = spawn('claude', [
+      '-p', 'hi',
+      '--output-format', 'stream-json',
+      '--verbose',
+      '--max-budget-usd', PROBE_MAX_BUDGET_USD,
+    ], {
       cwd,
       stdio: ['ignore', 'pipe', 'ignore'],
     })
@@ -70,7 +78,7 @@ function probeCliDefaults(cwd: string): Promise<{ model: string | null; permissi
     const timeout = setTimeout(() => {
       proc.kill('SIGTERM')
       resolve(result)
-    }, 10_000)
+    }, PROBE_TIMEOUT_MS)
 
     let buffer = ''
 

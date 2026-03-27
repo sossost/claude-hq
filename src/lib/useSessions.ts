@@ -35,7 +35,7 @@ export function useSessions({ projectPath }: UseSessionsOptions): UseSessionsRet
       if (res.ok === false) return
 
       const data = await res.json()
-      const all = Array.isArray(data?.sessions) ? (data.sessions as SessionSummary[]) : []
+      const all = Array.isArray(data?.data?.sessions) ? (data.data.sessions as SessionSummary[]) : []
       const filtered = all.filter((s) => s.projectPath === projectPath)
       setSessions(filtered)
     } catch {
@@ -71,10 +71,10 @@ export function useSessions({ projectPath }: UseSessionsOptions): UseSessionsRet
     }
 
     const data = await res.json()
-    if (data?.session?.id == null) {
+    if (data?.data?.session?.id == null) {
       throw new Error('Invalid session response')
     }
-    const session = data.session as PersistedSession
+    const session = data.data.session as PersistedSession
     setActiveSessionId(session.id)
     await fetchSessions()
     return session
@@ -87,9 +87,9 @@ export function useSessions({ projectPath }: UseSessionsOptions): UseSessionsRet
       if (res.ok === false) return null
 
       const data = await res.json()
-      if (data.session != null) {
+      if (data?.data?.session != null) {
         setActiveSessionId(id)
-        return data.session as PersistedSession
+        return data.data.session as PersistedSession
       }
       return null
     } catch {

@@ -37,10 +37,11 @@ export function useClaudeConfig(): ClaudeDefaults {
   useEffect(() => {
     fetch('/api/config')
       .then((res) => res.json())
-      .then((data: unknown) => {
-        if (isClaudeDefaults(data)) {
-          setDefaults(data)
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      .then((response: unknown) => {
+        const payload = (response as Record<string, unknown>)?.data
+        if (isClaudeDefaults(payload)) {
+          setDefaults(payload)
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
         }
       })
       .catch(() => {
