@@ -17,13 +17,18 @@ import { DEFAULT_SESSION_SETTINGS } from '@/types/events'
 
 type SidebarView = 'projects' | 'sessions'
 
+const SIDEBAR_PANEL_COUNT = 2
+const SIDEBAR_SLIDE_WIDTH = `${SIDEBAR_PANEL_COUNT * 100}%`
+const AGENT_PANEL_WIDTH = '40%'
+const AGENT_PANEL_MIN_WIDTH = '20rem'
+const AGENT_PANEL_MAX_WIDTH = '36rem'
+
+const IS_AGENT_PANEL_ENABLED = process.env.NEXT_PUBLIC_ENABLE_AGENT_PANEL === 'true'
+
 export default function Dashboard() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null)
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [isAgentPanelOpen, setIsAgentPanelOpen] = useState(false)
-  // Agent panel feature is implemented but hidden from the UI for now.
-  // Set NEXT_PUBLIC_ENABLE_AGENT_PANEL=true to re-enable.
-  const isAgentPanelEnabled = process.env.NEXT_PUBLIC_ENABLE_AGENT_PANEL === 'true'
   const [sessionSettings, setSessionSettings] = useState<SessionSettings>(() => {
     if (typeof window === 'undefined') return DEFAULT_SESSION_SETTINGS
     try {
@@ -104,7 +109,7 @@ export default function Dashboard() {
 
   const handleProjectSelect = useCallback((project: Project) => {
     const isSameProject = project.path === selectedProject?.path
-    if (!isSameProject) {
+    if (isSameProject === false) {
       setSelectedProject(project)
       localStorage.setItem('lastProjectPath', project.path)
       clear()
@@ -214,7 +219,7 @@ export default function Dashboard() {
             )}
           </button>
           {/* Agent panel toggle — hidden unless NEXT_PUBLIC_ENABLE_AGENT_PANEL=true */}
-          {isAgentPanelEnabled && (
+          {IS_AGENT_PANEL_ENABLED && (
             <button
               onClick={() => setIsAgentPanelOpen((prev) => !prev)}
               className="p-2 rounded-lg transition-colors hover:opacity-80"
@@ -244,7 +249,7 @@ export default function Dashboard() {
             <div
               className="flex h-full transition-transform duration-200 ease-in-out"
               style={{
-                width: '200%',
+                width: SIDEBAR_SLIDE_WIDTH,
                 transform: sidebarView === 'sessions' ? 'translateX(-50%)' : 'translateX(0)',
               }}
             >
@@ -291,13 +296,13 @@ export default function Dashboard() {
           />
         </main>
 
-        {isAgentPanelEnabled && isAgentPanelOpen && (
+        {IS_AGENT_PANEL_ENABLED && isAgentPanelOpen && (
           <aside
             className="shrink-0"
             style={{
-              width: '40%',
-              minWidth: '20rem',
-              maxWidth: '36rem',
+              width: AGENT_PANEL_WIDTH,
+              minWidth: AGENT_PANEL_MIN_WIDTH,
+              maxWidth: AGENT_PANEL_MAX_WIDTH,
               borderLeft: '1px solid var(--border-subtle)',
               background: 'var(--surface)',
             }}

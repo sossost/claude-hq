@@ -7,6 +7,9 @@ import DOMPurify from 'dompurify'
 const LIGHT_THEME = 'github-light'
 const DARK_THEME = 'github-dark'
 const COPY_FEEDBACK_MS = 2_000
+const CODE_MAX_HEIGHT = '32rem'
+const COPY_BUTTON_TOP_WITH_LANG = '2.25rem'
+const COPY_BUTTON_TOP_DEFAULT = '0.5rem'
 
 // Singleton highlighter — initialized once, reused across all code blocks
 let highlighterPromise: Promise<Highlighter> | null = null
@@ -127,7 +130,7 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
   const hasClipboard = typeof navigator !== 'undefined' && navigator.clipboard != null
   const showCopy = hasClipboard && trimmedCode !== ''
   const hasLang = language != null && language !== ''
-  const copyTop = hasLang ? '2.25rem' : '0.5rem'
+  const copyTop = hasLang ? COPY_BUTTON_TOP_WITH_LANG : COPY_BUTTON_TOP_DEFAULT
 
   return (
     <div
@@ -166,7 +169,7 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
       {html != null ? (
         <div
           className="overflow-x-auto [&_pre]:!m-0 [&_pre]:!p-3 [&_pre]:!rounded-none [&_pre]:!text-sm [&_code]:!text-sm"
-          style={{ maxHeight: '32rem' }}
+          style={{ maxHeight: CODE_MAX_HEIGHT }}
           dangerouslySetInnerHTML={{ __html: html }}
         />
       ) : (
@@ -175,7 +178,7 @@ export function CodeBlock({ code, language }: CodeBlockProps) {
           style={{
             background: 'var(--surface)',
             color: 'var(--foreground)',
-            maxHeight: '32rem',
+            maxHeight: CODE_MAX_HEIGHT,
             margin: 0,
           }}
         >

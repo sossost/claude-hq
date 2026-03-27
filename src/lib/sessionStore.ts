@@ -2,10 +2,17 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import type { PersistedSession, ChatMessage } from '@/types/events'
+import { requireHome } from '@/lib/env'
 
-const HOME = process.env.HOME
-if (HOME == null || HOME === '') {
-  throw new Error('HOME environment variable is required')
+const HOME = requireHome()
+
+function isPersistedSession(value: unknown): value is PersistedSession {
+  if (typeof value !== 'object' || value == null) return false
+  const v = value as Record<string, unknown>
+  return typeof v.id === 'string'
+    && typeof v.projectPath === 'string'
+    && Array.isArray(v.messages)
+    && typeof v.updatedAt === 'number'
 }
 const SESSION_DIR = join(HOME, '.claude', 'dashboard')
 const SESSION_FILE = join(SESSION_DIR, 'sessions.json')
@@ -85,7 +92,7 @@ function deriveTitle(content: string): string {
 // ─── File I/O ──────────────────────────────────────────
 
 async function readAllSessions(): Promise<PersistedSession[]> {
-  if (!existsSync(SESSION_FILE)) {
+  if (existsSync(SESSION_FILE) === false) {
     return []
   }
 
@@ -93,11 +100,10 @@ async function readAllSessions(): Promise<PersistedSession[]> {
     const raw = await readFile(SESSION_FILE, 'utf-8')
     const parsed = JSON.parse(raw)
 
-    if (!Array.isArray(parsed)) return []
-    return parsed as PersistedSession[]
-  } catch (err) {
-    console.error('[sessionStore] Failed to read sessions.json:', err)
-    // Backup corrupted file before it gets overwritten
+    if (Array.isArray(parsed) === false) return []
+    return parsed.filter(isPersistedSession)
+  } catch {
+    // Corrupted file — backup before it gets overwritten
     try {
       const backupPath = `${SESSION_FILE}.${Date.now()}.bak`
       const { copyFile } = await import('fs/promises')
@@ -110,7 +116,7 @@ async function readAllSessions(): Promise<PersistedSession[]> {
 }
 
 async function writeAllSessions(sessions: PersistedSession[]): Promise<void> {
-  if (!existsSync(SESSION_DIR)) {
+  if (existsSync(SESSION_DIR) === false) {
     await mkdir(SESSION_DIR, { recursive: true })
   }
 

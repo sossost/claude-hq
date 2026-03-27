@@ -1,11 +1,9 @@
 import { readdir, readFile } from 'fs/promises'
 import { join } from 'path'
 import type { AgentDefinition, AgentSource, AgentCategory } from '@/types/events'
+import { requireHome } from '@/lib/env'
 
-const HOME = process.env.HOME
-if (HOME == null || HOME === '') {
-  throw new Error('HOME environment variable is required')
-}
+const HOME = requireHome()
 const GLOBAL_AGENTS_DIR = join(HOME, '.claude', 'agents')
 
 const CATEGORY_MAP: Record<string, AgentCategory> = {

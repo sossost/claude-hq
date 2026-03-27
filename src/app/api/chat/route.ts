@@ -10,12 +10,19 @@ const VALID_PERMISSIONS = new Set<PermissionMode>(['default', 'auto', 'plan'])
 
 function validateSettings(raw: unknown): SessionSettings | undefined {
   if (typeof raw !== 'object' || raw == null) return undefined
-  const obj = raw as Record<string, unknown>
-  return {
-    model: typeof obj.model === 'string' && VALID_MODELS.has(obj.model as ModelOption) ? obj.model as ModelOption : null,
-    effort: typeof obj.effort === 'string' && VALID_EFFORTS.has(obj.effort as EffortLevel) ? obj.effort as EffortLevel : null,
-    permissionMode: typeof obj.permissionMode === 'string' && VALID_PERMISSIONS.has(obj.permissionMode as PermissionMode) ? obj.permissionMode as PermissionMode : null,
-  }
+  const record = raw as Record<string, unknown>
+
+  const model = typeof record.model === 'string' && (VALID_MODELS as Set<string>).has(record.model)
+    ? (record.model as ModelOption)
+    : null
+  const effort = typeof record.effort === 'string' && (VALID_EFFORTS as Set<string>).has(record.effort)
+    ? (record.effort as EffortLevel)
+    : null
+  const permissionMode = typeof record.permissionMode === 'string' && (VALID_PERMISSIONS as Set<string>).has(record.permissionMode)
+    ? (record.permissionMode as PermissionMode)
+    : null
+
+  return { model, effort, permissionMode }
 }
 
 export const dynamic = 'force-dynamic'
@@ -54,7 +61,7 @@ export async function POST(request: NextRequest) {
   const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
   const rawSessionId = body.claudeSessionId
   const claudeSessionId = typeof rawSessionId === 'string' && UUID_RE.test(rawSessionId) ? rawSessionId : undefined
-  const persistSessionId = body.persistSessionId as string | undefined
+  const persistSessionId = typeof body.persistSessionId === 'string' ? body.persistSessionId : undefined
   const settings = validateSettings(body.settings)
 
   const encoder = new TextEncoder()

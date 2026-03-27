@@ -4,6 +4,7 @@ import { useState, useCallback, useRef } from 'react'
 import type { ChatMessage, Project, PersistedSession, SessionSettings } from '@/types/events'
 
 const ASSISTANT_CHUNK_MERGE_WINDOW_MS = 500
+const SSE_DATA_PREFIX = 'data: '
 
 interface UseChatOptions {
   project: Project | null
@@ -44,7 +45,10 @@ export function useChat({ project, settings }: UseChatOptions): UseChatReturn {
       }),
     })
     const data = await res.json()
-    const newId = data.session.id as string
+    const newId = data?.session?.id
+    if (typeof newId !== 'string') {
+      throw new Error('Failed to create session')
+    }
     setSessionId(newId)
     return newId
   }, [sessionId, project])
@@ -92,7 +96,7 @@ export function useChat({ project, settings }: UseChatOptions): UseChatReturn {
         signal: abort.signal,
       })
 
-      if (!res.ok || res.body == null) {
+      if (res.ok === false || res.body == null) {
         throw new Error(`HTTP ${res.status}`)
       }
 
@@ -109,8 +113,8 @@ export function useChat({ project, settings }: UseChatOptions): UseChatReturn {
         buffer = lines.pop() ?? ''
 
         for (const line of lines) {
-          if (!line.startsWith('data: ')) continue
-          const json = line.slice(6)
+          if (line.startsWith(SSE_DATA_PREFIX) === false) continue
+          const json = line.slice(SSE_DATA_PREFIX.length)
           try {
             const msg = JSON.parse(json)
 

@@ -2,8 +2,9 @@ import { readFile, writeFile, mkdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import type { Project } from '@/types/events'
+import { requireHome } from '@/lib/env'
 
-const HOME = process.env.HOME ?? ''
+const HOME = requireHome()
 const DASHBOARD_DIR = join(HOME, '.claude', 'dashboard')
 const WORKSPACE_FILE = join(DASHBOARD_DIR, 'workspace.json')
 
@@ -17,7 +18,7 @@ interface Workspace {
 }
 
 async function readWorkspace(): Promise<Workspace> {
-  if (!existsSync(WORKSPACE_FILE)) {
+  if (existsSync(WORKSPACE_FILE) === false) {
     return { projects: [] }
   }
   try {
@@ -30,7 +31,7 @@ async function readWorkspace(): Promise<Workspace> {
 }
 
 async function writeWorkspace(workspace: Workspace): Promise<void> {
-  if (!existsSync(DASHBOARD_DIR)) {
+  if (existsSync(DASHBOARD_DIR) === false) {
     await mkdir(DASHBOARD_DIR, { recursive: true })
   }
   await writeFile(WORKSPACE_FILE, JSON.stringify(workspace, null, 2))
@@ -61,7 +62,7 @@ export async function importProject(path: string): Promise<Project> {
   const workspace = await readWorkspace()
   const alreadyExists = workspace.projects.some((p) => p.path === path)
 
-  if (!alreadyExists) {
+  if (alreadyExists === false) {
     const updated: Workspace = {
       projects: [...workspace.projects, { path, addedAt: Date.now() }],
     }

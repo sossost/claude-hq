@@ -98,7 +98,7 @@ export function SettingsPanel({ settings, activeModel, activePermissionMode, cla
   const hasAnyVisible = resolvedModel != null || resolvedEffort != null || resolvedPermission != null
     || settings.model != null || settings.effort != null || settings.permissionMode != null
 
-  if (!hasAnyVisible) return null
+  if (hasAnyVisible === false) return null
 
   type ItemConfig = {
     key: DropdownType

@@ -4,10 +4,39 @@ import type { ChatMessage, SessionSettings } from '@/types/events'
 import { TOOL_RESULT_NAME } from '@/types/events'
 
 const TOOL_OUTPUT_MAX_LENGTH = 500
+const TOOL_INPUT_DISPLAY_MAX_LENGTH = 200
 
-let counter = 0
-function nextId() {
-  return `msg-${Date.now()}-${++counter}`
+function nextId(): string {
+  return `msg-${Date.now()}-${crypto.randomUUID().slice(0, 8)}`
+}
+
+// ─── Safe field extractors for untrusted CLI JSON ──────────────
+
+function str(obj: Record<string, unknown>, key: string): string | null {
+  const v = obj[key]
+  return typeof v === 'string' ? v : null
+}
+
+function num(obj: Record<string, unknown>, key: string): number | undefined {
+  const v = obj[key]
+  return typeof v === 'number' ? v : undefined
+}
+
+function bool(obj: Record<string, unknown>, key: string): boolean {
+  return obj[key] === true
+}
+
+function arr(obj: Record<string, unknown>, key: string): Array<Record<string, unknown>> {
+  const v = obj[key]
+  return Array.isArray(v) ? v as Array<Record<string, unknown>> : []
+}
+
+function obj(parent: Record<string, unknown>, key: string): Record<string, unknown> | null {
+  const v = parent[key]
+  if (typeof v === 'object' && v != null && Array.isArray(v) === false) {
+    return v as Record<string, unknown>
+  }
+  return null
 }
 
 /**
@@ -109,7 +138,8 @@ export class ClaudeSession extends EventEmitter {
       if (line.trim() === '') continue
       try {
         const event = JSON.parse(line)
-        const messages = this.parseEvent(event)
+        if (typeof event !== 'object' || event == null) continue
+        const messages = this.parseEvent(event as Record<string, unknown>)
         for (const msg of messages) {
           this.emit('message', msg)
         }
@@ -120,20 +150,19 @@ export class ClaudeSession extends EventEmitter {
   }
 
   private parseEvent(event: Record<string, unknown>): ChatMessage[] {
-    const type = event['type'] as string
+    const type = str(event, 'type')
 
     // Init event — capture sessionId, model, permissionMode and emit to UI
     if (type === 'system' && event['subtype'] === 'init') {
-      this.sessionId = event['session_id'] as string
-      this.model = event['model'] as string ?? null
-      const permMode = event['permissionMode'] as string | undefined
+      this.sessionId = str(event, 'session_id')
+      this.model = str(event, 'model')
       return [{
         id: nextId(),
         role: 'status',
-        sessionId: this.sessionId,
+        sessionId: this.sessionId ?? '',
         status: 'running',
         model: this.model ?? undefined,
-        permissionMode: permMode,
+        permissionMode: str(event, 'permissionMode') ?? undefined,
         timestamp: Date.now(),
       }]
     }
@@ -150,97 +179,112 @@ export class ClaudeSession extends EventEmitter {
 
     // Assistant message — text, thinking, or tool call
     if (type === 'assistant') {
-      const msg = event['message'] as Record<string, unknown>
-      const content = msg['content'] as Array<Record<string, unknown>>
-      const results: ChatMessage[] = []
-
-      // Collect thinking text from all thinking blocks in this event
-      const thinkingText = content
-        .filter((block) => block['type'] === 'thinking' && typeof block['thinking'] === 'string' && block['thinking'] !== '')
-        .map((block) => block['thinking'] as string)
-        .join('\n') || undefined
-
-      for (const block of content) {
-        if (block['type'] === 'text') {
-          const text = block['text']
-          results.push({
-            id: nextId(),
-            role: 'assistant',
-            content: typeof text === 'string' ? text : JSON.stringify(text),
-            ...(thinkingText != null ? { thinking: thinkingText } : {}),
-            timestamp: Date.now(),
-          })
-        }
-
-        if (block['type'] === 'tool_use') {
-          const toolName = block['name'] as string
-          const toolUseId = block['id'] as string | undefined
-          const input = block['input'] as Record<string, unknown>
-          const display = input['command'] as string
-            ?? input['file_path'] as string
-            ?? input['pattern'] as string
-            ?? input['description'] as string
-            ?? JSON.stringify(input).slice(0, 200)
-
-          results.push({
-            id: nextId(),
-            role: 'tool',
-            toolName,
-            toolUseId,
-            input: display,
-            output: null,
-            isError: false,
-            timestamp: Date.now(),
-          })
-        }
-      }
-      return results
+      return this.parseAssistantEvent(event)
     }
 
     // Tool result — execution output
     if (type === 'user') {
-      const msg = event['message'] as Record<string, unknown>
-      const content = msg['content'] as Array<Record<string, unknown>>
-      const toolResult = event['tool_use_result'] as Record<string, unknown> | undefined
-      const results: ChatMessage[] = []
-
-      for (const block of content) {
-        if (block['type'] === 'tool_result') {
-          const stdout = toolResult?.['stdout'] as string ?? block['content'] as string ?? ''
-          const truncated = stdout.length > TOOL_OUTPUT_MAX_LENGTH
-            ? stdout.slice(0, TOOL_OUTPUT_MAX_LENGTH) + '...'
-            : stdout
-          results.push({
-            id: nextId(),
-            role: 'tool',
-            toolName: TOOL_RESULT_NAME,
-            toolUseId: block['tool_use_id'] as string | undefined,
-            input: '',
-            output: truncated,
-            isError: block['is_error'] as boolean,
-            timestamp: Date.now(),
-          })
-        }
-      }
-      return results
+      return this.parseToolResultEvent(event)
     }
 
     // Final result — session complete
     if (type === 'result') {
-      this.sessionId = event['session_id'] as string
+      this.sessionId = str(event, 'session_id')
       return [{
         id: nextId(),
         role: 'status',
-        sessionId: this.sessionId,
+        sessionId: this.sessionId ?? '',
         status: event['subtype'] === 'success' ? 'done' : 'error',
         model: this.model ?? undefined,
-        duration: event['duration_ms'] as number,
-        cost: event['total_cost_usd'] as number,
-        turns: event['num_turns'] as number,
+        duration: num(event, 'duration_ms'),
+        cost: num(event, 'total_cost_usd'),
+        turns: num(event, 'num_turns'),
         timestamp: Date.now(),
       }]
     }
 
     return []
+  }
+
+  private parseAssistantEvent(event: Record<string, unknown>): ChatMessage[] {
+    const msg = obj(event, 'message')
+    if (msg == null) return []
+
+    const content = arr(msg, 'content')
+    const results: ChatMessage[] = []
+
+    // Collect thinking text from all thinking blocks in this event
+    const thinkingText = content
+      .filter((block) => block['type'] === 'thinking' && typeof block['thinking'] === 'string' && block['thinking'] !== '')
+      .map((block) => block['thinking'] as string)
+      .join('\n') || undefined
+
+    for (const block of content) {
+      if (block['type'] === 'text') {
+        const text = block['text']
+        results.push({
+          id: nextId(),
+          role: 'assistant',
+          content: typeof text === 'string' ? text : JSON.stringify(text),
+          ...(thinkingText != null ? { thinking: thinkingText } : {}),
+          timestamp: Date.now(),
+        })
+      }
+
+      if (block['type'] === 'tool_use') {
+        const toolName = str(block, 'name') ?? 'unknown'
+        const toolUseId = str(block, 'id') ?? undefined
+        const input = obj(block, 'input') ?? {}
+        const display = str(input, 'command')
+          ?? str(input, 'file_path')
+          ?? str(input, 'pattern')
+          ?? str(input, 'description')
+          ?? JSON.stringify(input).slice(0, TOOL_INPUT_DISPLAY_MAX_LENGTH)
+
+        results.push({
+          id: nextId(),
+          role: 'tool',
+          toolName,
+          toolUseId,
+          input: display,
+          output: null,
+          isError: false,
+          timestamp: Date.now(),
+        })
+      }
+    }
+    return results
+  }
+
+  private parseToolResultEvent(event: Record<string, unknown>): ChatMessage[] {
+    const msg = obj(event, 'message')
+    if (msg == null) return []
+
+    const content = arr(msg, 'content')
+    const toolResult = obj(event, 'tool_use_result')
+    const results: ChatMessage[] = []
+
+    for (const block of content) {
+      if (block['type'] === 'tool_result') {
+        const stdout = (toolResult != null ? str(toolResult, 'stdout') : null)
+          ?? str(block, 'content')
+          ?? ''
+        const truncated = stdout.length > TOOL_OUTPUT_MAX_LENGTH
+          ? stdout.slice(0, TOOL_OUTPUT_MAX_LENGTH) + '...'
+          : stdout
+
+        results.push({
+          id: nextId(),
+          role: 'tool',
+          toolName: TOOL_RESULT_NAME,
+          toolUseId: str(block, 'tool_use_id') ?? undefined,
+          input: '',
+          output: truncated,
+          isError: bool(block, 'is_error'),
+          timestamp: Date.now(),
+        })
+      }
+    }
+    return results
   }
 }

@@ -26,10 +26,10 @@ export function useAgents({ projectPath }: UseAgentsOptions): UseAgentsReturn {
 
     fetch(`/api/agents?${params}`)
       .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        if (res.ok === false) throw new Error(`HTTP ${res.status}`)
         return res.json()
       })
-      .then((data) => setAgents(data.agents as AgentDefinition[]))
+      .then((data) => setAgents(Array.isArray(data?.agents) ? data.agents : []))
       .catch(() => setAgents([]))
       .finally(() => setIsLoading(false))
   }, [projectPath])

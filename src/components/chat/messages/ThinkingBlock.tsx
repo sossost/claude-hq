@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 
+const THINKING_MAX_HEIGHT = '20rem'
+
 interface ThinkingBlockProps {
   content: string
   isStreaming?: boolean
@@ -52,7 +54,7 @@ export function ThinkingBlock({ content, isStreaming = false }: ThinkingBlockPro
           style={{
             color: 'var(--content-muted)',
             borderTop: '1px solid var(--border-subtle)',
-            maxHeight: '20rem',
+            maxHeight: THINKING_MAX_HEIGHT,
             overflowY: 'auto',
           }}
         >

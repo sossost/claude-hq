@@ -46,7 +46,7 @@ function deriveTasksFromMessages(
   const completionMap = new Map<string, { isError: boolean; timestamp: number }>()
 
   for (const msg of messages) {
-    if (!isToolMessage(msg)) continue
+    if (isToolMessage(msg) === false) continue
     if (msg.toolUseId == null) continue
 
     if (msg.toolName === AGENT_TOOL_NAME) {
@@ -136,7 +136,7 @@ export function useAgentTasks(
 
   // Timer to update elapsed time for running tasks
   useEffect(() => {
-    if (!hasActiveTasks) return
+    if (hasActiveTasks === false) return
 
     const interval = setInterval(() => {
       setTick((prev) => prev + 1)

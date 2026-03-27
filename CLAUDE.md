@@ -247,6 +247,56 @@ yarn start        # Production server on port 3100
 yarn lint         # ESLint
 ```
 
+## Code Quality Checklist (MANDATORY)
+
+Every line of code MUST pass these checks. No exceptions.
+
+### Explicit Intent
+- `data == null` NOT `!data` — NEVER use implicit falsy coercion
+- `res.ok === false` NOT `!res.ok` — even for booleans, be explicit
+- `existsSync(path) === false` NOT `!existsSync(path)`
+- `Array.isArray(x) === false` NOT `!Array.isArray(x)`
+- Named constants for ALL numbers: `const MAX_RETRIES = 5` NOT bare `5`
+- Boolean names as yes/no questions: `isLoading`, `hasData`, `canSubmit`
+
+### Type Safety
+- NEVER use `as` casts on external data (API responses, CLI output, JSON.parse)
+- ALWAYS validate at boundaries with runtime checks: `typeof x === 'string'`, `Array.isArray(x)`
+- Use Zod schemas or guard functions for complex shapes
+- Discriminated unions over boolean flags: `status: 'success' | 'error'` NOT `isError: boolean`
+
+### Security
+- ALWAYS throw on missing `HOME` env var — NEVER fallback to `''`
+- NEVER expose internal paths or stack traces in error messages returned to clients
+- Validate ALL external input with runtime checks before use
+
+### Accessibility
+- ALL interactive elements need `aria-label` (buttons, toggles, close buttons)
+- Collapsible elements need `aria-expanded`
+- Lists need `role="list"` / `role="listitem"` or `<ul>`/`<li>`
+- Live regions (chat messages) need `role="log"` + `aria-live="polite"`
+- Custom dropdowns need `role="listbox"` + keyboard navigation (Arrow keys)
+
+### Single Responsibility
+- One function does ONE thing — max 50 lines
+- One hook manages ONE concern — compose hooks for complex behavior
+- One component renders ONE concept — extract when > 200 lines
+- God components/hooks MUST be decomposed
+
+### Declarative Patterns
+- `.filter().map()` NOT `for...of` + `push`
+- `Promise.all(items.map(...))` NOT sequential `for` loop with `await`
+- React: Suspense + ErrorBoundary, NOT manual loading/error state
+
+### API Response Format
+- ALL routes MUST use `{ success: boolean, data?: T, error?: { code, message } }`
+- No bare `{ sessions }`, `{ agents }` — always wrap in the envelope
+
+### Production Hygiene
+- ZERO `console.log` / `console.error` in production code
+- No `setTimeout` without cleanup (store timer ID, clear on unmount)
+- No `useEffect` for derived state — compute directly or use `useMemo`
+
 ## Rules
 
 - **English only** in code, comments, docs (open source project)

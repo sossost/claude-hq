@@ -2,8 +2,9 @@ import { readdir } from 'fs/promises'
 import { existsSync } from 'fs'
 import { join } from 'path'
 import type { Project } from '@/types/events'
+import { requireHome } from '@/lib/env'
 
-const HOME = process.env.HOME ?? ''
+const HOME = requireHome()
 const CLAUDE_PROJECTS_DIR = join(HOME, '.claude', 'projects')
 
 /**
@@ -14,7 +15,7 @@ const CLAUDE_PROJECTS_DIR = join(HOME, '.claude', 'projects')
  *   -Users-alice-my-project → /Users/alice/my-project
  */
 export async function listProjects(): Promise<Project[]> {
-  if (!existsSync(CLAUDE_PROJECTS_DIR)) {
+  if (existsSync(CLAUDE_PROJECTS_DIR) === false) {
     return []
   }
 
@@ -51,7 +52,7 @@ function decodeFolderName(encoded: string): string | null {
   // Encode the home path for prefix matching (e.g., "Users/alice" → "Users-alice")
   const homeEncoded = HOME.slice(1).replaceAll('/', '-')
 
-  if (!stripped.startsWith(homeEncoded)) {
+  if (stripped.startsWith(homeEncoded) === false) {
     return null
   }
 
@@ -92,7 +93,7 @@ function findExistingPath(base: string, parts: string[]): string | null {
     const name = parts.slice(0, take).join('-')
     const candidate = join(base, name)
 
-    if (!existsSync(candidate)) continue
+    if (existsSync(candidate) === false) continue
 
     const remaining = parts.slice(take)
     if (remaining.length === 0) {

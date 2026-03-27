@@ -32,10 +32,10 @@ export function useSessions({ projectPath }: UseSessionsOptions): UseSessionsRet
     setIsLoading(true)
     try {
       const res = await fetch('/api/sessions')
-      if (!res.ok) return
+      if (res.ok === false) return
 
       const data = await res.json()
-      const all = data.sessions as SessionSummary[]
+      const all = Array.isArray(data?.sessions) ? (data.sessions as SessionSummary[]) : []
       const filtered = all.filter((s) => s.projectPath === projectPath)
       setSessions(filtered)
     } catch {
@@ -66,11 +66,14 @@ export function useSessions({ projectPath }: UseSessionsOptions): UseSessionsRet
       }),
     })
 
-    if (!res.ok) {
+    if (res.ok === false) {
       throw new Error(`Failed to create session: ${res.status}`)
     }
 
     const data = await res.json()
+    if (data?.session?.id == null) {
+      throw new Error('Invalid session response')
+    }
     const session = data.session as PersistedSession
     setActiveSessionId(session.id)
     await fetchSessions()
@@ -81,7 +84,7 @@ export function useSessions({ projectPath }: UseSessionsOptions): UseSessionsRet
     try {
       const params = new URLSearchParams({ id })
       const res = await fetch(`/api/sessions?${params}`)
-      if (!res.ok) return null
+      if (res.ok === false) return null
 
       const data = await res.json()
       if (data.session != null) {
@@ -98,7 +101,7 @@ export function useSessions({ projectPath }: UseSessionsOptions): UseSessionsRet
     const params = new URLSearchParams({ id })
     const res = await fetch(`/api/sessions?${params}`, { method: 'DELETE' })
 
-    if (!res.ok) {
+    if (res.ok === false) {
       throw new Error(`Failed to delete session: ${res.status}`)
     }
 

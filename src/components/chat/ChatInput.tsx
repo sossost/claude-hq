@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react'
 
+const TEXTAREA_MAX_HEIGHT_PX = 160
+
 interface ChatInputProps {
   onSend: (message: string) => void
   onStop: () => void
@@ -15,7 +17,7 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
   const composingRef = useRef(false)
 
   useEffect(() => {
-    if (!isRunning) {
+    if (isRunning === false) {
       textareaRef.current?.focus()
     }
   }, [isRunning])
@@ -25,7 +27,7 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
     const el = textareaRef.current
     if (el == null) return
     el.style.height = 'auto'
-    el.style.height = `${Math.min(el.scrollHeight, 160)}px`
+    el.style.height = `${Math.min(el.scrollHeight, TEXTAREA_MAX_HEIGHT_PX)}px`
   }, [value])
 
   function handleSubmit() {
@@ -36,7 +38,7 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
-    if (e.key === 'Enter' && !e.shiftKey && !composingRef.current) {
+    if (e.key === 'Enter' && e.shiftKey === false && composingRef.current === false) {
       e.preventDefault()
       if (isRunning) return
       handleSubmit()
@@ -65,7 +67,7 @@ export function ChatInput({ onSend, onStop, isRunning, disabled }: ChatInputProp
           placeholder="Message Claude..."
           rows={1}
           className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm focus:outline-none"
-          style={{ color: 'var(--foreground)', maxHeight: '160px' }}
+          style={{ color: 'var(--foreground)', maxHeight: `${TEXTAREA_MAX_HEIGHT_PX}px` }}
         />
         <div className="flex items-center justify-between px-3 pb-2">
           <span className="text-[10px]" style={{ color: 'var(--content-muted)' }}>

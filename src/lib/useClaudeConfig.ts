@@ -10,10 +10,18 @@ export interface ClaudeDefaults {
 
 const STORAGE_KEY = 'claudeDefaults'
 
+function isClaudeDefaults(v: unknown): v is ClaudeDefaults {
+  if (typeof v !== 'object' || v == null) return false
+  return 'model' in v && 'effortLevel' in v && 'permissionMode' in v
+}
+
 function loadCached(): ClaudeDefaults | null {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw != null) return JSON.parse(raw) as ClaudeDefaults
+    if (raw != null) {
+      const parsed: unknown = JSON.parse(raw)
+      if (isClaudeDefaults(parsed)) return parsed
+    }
   } catch {
     // Ignore
   }
@@ -29,9 +37,11 @@ export function useClaudeConfig(): ClaudeDefaults {
   useEffect(() => {
     fetch('/api/config')
       .then((res) => res.json())
-      .then((data: ClaudeDefaults) => {
-        setDefaults(data)
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+      .then((data: unknown) => {
+        if (isClaudeDefaults(data)) {
+          setDefaults(data)
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+        }
       })
       .catch(() => {
         // Config fetch failure is non-fatal

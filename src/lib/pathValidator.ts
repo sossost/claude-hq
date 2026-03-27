@@ -1,7 +1,8 @@
 import { resolve } from 'path'
 import { existsSync } from 'fs'
+import { requireHome } from '@/lib/env'
 
-const HOME = process.env.HOME ?? ''
+const HOME = requireHome()
 
 /**
  * Validates that a path resolves to an existing directory
@@ -10,12 +11,12 @@ const HOME = process.env.HOME ?? ''
 export function assertSafePath(raw: string): string {
   const resolved = resolve(raw)
 
-  if (!resolved.startsWith(HOME + '/') && resolved !== HOME) {
-    throw new PathValidationError(`Path is outside the home directory: ${resolved}`)
+  if (resolved.startsWith(HOME + '/') === false && resolved !== HOME) {
+    throw new PathValidationError('Invalid path')
   }
 
-  if (!existsSync(resolved)) {
-    throw new PathValidationError(`Path does not exist: ${resolved}`)
+  if (existsSync(resolved) === false) {
+    throw new PathValidationError('Path is not accessible')
   }
 
   return resolved
