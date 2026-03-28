@@ -9,108 +9,125 @@ interface ToolBubbleProps {
   message: Extract<ChatMessage, { role: 'tool' }>
 }
 
+const TOOL_ICONS: Record<string, string> = {
+  Read: '📄',
+  Write: '✏️',
+  Edit: '✏️',
+  Bash: '⚡',
+  Glob: '🔍',
+  Grep: '🔍',
+  Agent: '🤖',
+  WebFetch: '🌐',
+  WebSearch: '🌐',
+  TodoWrite: '📋',
+  TaskCreate: '📋',
+  TaskUpdate: '📋',
+}
+
+function getToolIcon(toolName: string): string {
+  return TOOL_ICONS[toolName] ?? '🔧'
+}
+
+function formatToolSummary(toolName: string, input: string): string {
+  // Show a meaningful one-line summary based on tool type
+  const trimmed = input.trim()
+  if (trimmed === '') return toolName
+
+  // For file operations, show the path
+  // For Bash, show the command
+  // For others, truncate the input
+  return trimmed
+}
+
 export function ToolBubble({ message }: ToolBubbleProps) {
   const isResult = message.toolName === TOOL_RESULT_NAME
   const input = safeContent(message.input)
   const output = message.output != null ? safeContent(message.output) : null
   const isWaitingForResult = output == null && isResult === false
 
-  // Expand while waiting for result (streaming), collapsed otherwise
-  const [isOpen, setIsOpen] = useState(isWaitingForResult)
+  const [isOpen, setIsOpen] = useState(false)
 
-  // Tool results (→ result) are displayed inline with their parent tool call
-  // When collapsed, just show tool name header as clickable
+  // Tool results: show nothing if empty, compact error/output on click
   if (isResult) {
     if (output == null || output === '') return null
 
-    return (
-      <div
-        className="rounded-xl text-xs font-mono overflow-hidden"
-        style={{ border: '1px solid var(--chat-tool-border)', background: 'var(--chat-tool)' }}
-      >
-        <button
-          onClick={() => setIsOpen((prev) => !prev)}
-          className="flex items-center gap-2 px-3 py-2 w-full text-left"
-          style={{ background: 'var(--chat-tool-header)' }}
-          aria-expanded={isOpen}
-          aria-label={isOpen ? 'Collapse tool result' : 'Expand tool result'}
-        >
-          <span
-            className="transition-transform duration-200 text-[10px]"
-            style={{
-              transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-              color: 'var(--content-muted)',
-            }}
-          >
-            ▶
-          </span>
-          <span style={{ color: 'var(--content-muted)' }}>result</span>
-          {message.isError && (
-            <span
-              className="inline-block w-1.5 h-1.5 rounded-full"
-              style={{ background: 'var(--error)' }}
-            />
-          )}
-        </button>
-        {isOpen && (
+    // Error results are always visible
+    if (message.isError) {
+      return (
+        <div className="flex items-start gap-2 pl-5">
           <pre
-            className="px-3 py-2 whitespace-pre-wrap break-all"
-            style={{
-              color: message.isError ? 'var(--error)' : 'var(--content-secondary)',
-              maxHeight: '20rem',
-              overflowY: 'auto',
-              margin: 0,
-            }}
+            className="text-xs font-mono whitespace-pre-wrap break-all leading-relaxed"
+            style={{ color: 'var(--error)', margin: 0 }}
           >
-            {output}
+            {output.length > 500 ? `${output.slice(0, 500)}…` : output}
           </pre>
-        )}
-      </div>
-    )
+        </div>
+      )
+    }
+
+    // Non-error results: hidden by default, clickable to expand
+    return null
   }
 
-  // Tool call (invocation)
+  // Tool call: compact log line
+  const icon = getToolIcon(message.toolName)
+  const summary = formatToolSummary(message.toolName, input)
+  const hasOutput = output != null && output !== ''
+  const isDone = output != null
+  const hasError = message.isError
+
   return (
-    <div
-      className="rounded-xl text-xs font-mono overflow-hidden"
-      style={{ border: '1px solid var(--chat-tool-border)', background: 'var(--chat-tool)' }}
-    >
+    <div>
       <button
-        onClick={() => setIsOpen((prev) => !prev)}
-        className="flex items-center gap-2 px-3 py-2 w-full text-left"
-        style={{ background: 'var(--chat-tool-header)' }}
-        aria-expanded={isOpen}
-        aria-label={isOpen ? `Collapse ${message.toolName}` : `Expand ${message.toolName}`}
+        onClick={() => hasOutput && setIsOpen((prev) => !prev)}
+        className="flex items-center gap-1.5 text-xs py-0.5 w-full text-left group"
+        style={{ cursor: hasOutput ? 'pointer' : 'default' }}
+        aria-expanded={hasOutput ? isOpen : undefined}
+        aria-label={`${message.toolName}: ${summary}`}
       >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 10 10"
-          fill="none"
-          className="transition-transform duration-200"
-          style={{
-            transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)',
-            color: 'var(--content-muted)',
-          }}
-        >
-          <path d="M3 2L7 5L3 8" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        <span className="font-medium" style={{ color: 'var(--warning)' }}>
+        <span className="shrink-0 text-[11px]">{icon}</span>
+        <span className="font-medium shrink-0" style={{ color: 'var(--content-muted)' }}>
           {message.toolName}
         </span>
-        <span className="truncate" style={{ color: 'var(--content-muted)' }}>
-          {input}
+        <span
+          className="truncate"
+          style={{ color: 'var(--content-muted)', opacity: 0.7 }}
+        >
+          {summary}
         </span>
+        <span className="shrink-0 ml-auto">
+          {isWaitingForResult && (
+            <span
+              className="inline-block w-1.5 h-1.5 rounded-full animate-pulse"
+              style={{ background: 'var(--warning)' }}
+            />
+          )}
+          {isDone && hasError === false && (
+            <span style={{ color: 'var(--success)', fontSize: '11px' }}>✓</span>
+          )}
+          {hasError && (
+            <span style={{ color: 'var(--error)', fontSize: '11px' }}>✗</span>
+          )}
+        </span>
+        {hasOutput && (
+          <span
+            className="shrink-0 text-[9px] opacity-0 group-hover:opacity-60 transition-opacity"
+            style={{ color: 'var(--content-muted)' }}
+          >
+            {isOpen ? '▼' : '▶'}
+          </span>
+        )}
       </button>
-      {isOpen && output != null && output !== '' && (
+      {isOpen && hasOutput && (
         <pre
-          className="px-3 py-2 whitespace-pre-wrap break-all"
+          className="ml-5 mt-1 px-3 py-2 rounded-lg text-xs font-mono whitespace-pre-wrap break-all"
           style={{
-            color: message.isError ? 'var(--error)' : 'var(--content-secondary)',
-            borderTop: '1px solid var(--chat-tool-border)',
+            color: 'var(--content-secondary)',
+            background: 'var(--surface)',
             maxHeight: '20rem',
             overflowY: 'auto',
-            margin: 0,
+            margin: '0.25rem 0 0.25rem 1.25rem',
+            overscrollBehavior: 'contain',
           }}
         >
           {output}
