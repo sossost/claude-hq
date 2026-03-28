@@ -46,12 +46,12 @@ Claude Code is powerful but trapped in the terminal.
 ## Architecture
 
 ```
-Browser (Next.js)
+Browser (client-only, no SSR)
     ↕ HTTP / SSE
-Local Server (Node.js, same machine)
+Next.js API routes (local server)
     ↕ child_process.spawn
-Claude Code CLI (claude -p)
-    ↕ Claude API (Max subscription)
+Claude Code CLI (claude -p --output-format stream-json --verbose)
+    ↕ Max subscription
 Claude Model
 ```
 

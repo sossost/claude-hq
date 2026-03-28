@@ -50,6 +50,12 @@
 - [x] Settings persistence (localStorage)
 - [x] Status info in chat (duration, turns, cost, model) — inline after completion
 - [x] Design refresh (color system, input area, header icons, scrollbar)
+- [x] Custom slash commands with autocomplete picker (`.claude/commands/` scanning)
+- [x] Builtin commands (`/clear`, `/new`, `/model`, `/effort`, `/permission`)
+- [x] Mobile responsive layout (overlay sidebar and panels, touch-friendly)
+- [x] iOS auto-zoom prevention (16px font on mobile)
+- [x] Pinch-to-zoom disabled on mobile viewport
+- [x] Tool bubbles redesigned as compact log-style lines
 
 ## Phase 4: Scheduling & Automation
 
