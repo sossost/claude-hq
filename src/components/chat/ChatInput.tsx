@@ -125,7 +125,7 @@ export function ChatInput({ onSend, onStop, onBuiltinCommand, isRunning, disable
           onKeyDown={handleKeyDown}
           placeholder="Message Claude..."
           rows={1}
-          className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-sm focus:outline-none"
+          className="w-full resize-none bg-transparent px-4 pt-3 pb-1 text-base sm:text-sm focus:outline-none"
           style={{ color: 'var(--foreground)', maxHeight: `${TEXTAREA_MAX_HEIGHT_PX}px` }}
           aria-label="Chat message"
           aria-expanded={picker.shouldShowPicker}
