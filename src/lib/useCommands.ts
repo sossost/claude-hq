@@ -19,7 +19,7 @@ function isValidCommand(x: unknown): x is CommandDefinition {
   return (
     typeof record.name === 'string' &&
     typeof record.description === 'string' &&
-    typeof record.template === 'string' && record.template.length > 0 &&
+    typeof record.template === 'string' &&
     (record.source === 'project' || record.source === 'global' || record.source === 'builtin')
   )
 }
