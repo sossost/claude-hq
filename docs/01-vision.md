@@ -23,7 +23,7 @@ Claude Code is powerful but trapped in the terminal.
 
 ## Non-Goals
 
-- Calling the Claude API directly (CLI wrapper only, uses Max subscription)
+- Calling the Claude API directly (CLI wrapper only — no separate API key needed)
 - Cloud deployment (local-only — requires `claude` CLI on the same machine)
 - Reimplementing Claude Code features (this is a wrapper, not a replacement)
 - Multi-tenant access (single user, single machine)
@@ -41,7 +41,7 @@ Claude Code is powerful but trapped in the terminal.
 | Real-time streaming | `--output-format stream-json --verbose` | Validated |
 | Session continuity | `--resume SESSION_ID` | Validated |
 | Project switching | `cwd` parameter + `~/.claude/projects/` scan | Validated |
-| Cost | Included in Max subscription (no additional charges) | Confirmed |
+| Cost | Uses existing CLI auth — no separate API key needed | Confirmed |
 
 ## Architecture
 
@@ -51,7 +51,7 @@ Browser (client-only, no SSR)
 Next.js API routes (local server)
     ↕ child_process.spawn
 Claude Code CLI (claude -p --output-format stream-json --verbose)
-    ↕ Max subscription
+    ↕ Anthropic API
 Claude Model
 ```
 
@@ -63,4 +63,4 @@ For remote access, expose via Tailscale or Cloudflare Tunnel.
 - **CLI dependency**: Requires `claude` binary installed and authenticated
 - **Local only**: Cannot run in serverless/cloud environments
 - **Single user**: Not multi-tenant (your machine, your sessions)
-- **Max subscription**: API key billing mode is not supported
+- **CLI auth only**: Uses the CLI's existing authentication — no separate API key configuration

@@ -8,7 +8,7 @@ A local web dashboard that gives you visual control over Claude Code's agent sys
 
 Claude HQ wraps the Claude Code CLI (`claude -p`) in a visual web interface. Instead of typing commands in a terminal, you interact with Claude agents through a chat UI — with real-time streaming, rich markdown rendering, project management, session persistence, and agent monitoring.
 
-**This is a local tool.** It runs on the same machine as your Claude Code CLI and uses your existing Max subscription. No additional API costs.
+**This is a local tool.** It runs on the same machine as your Claude Code CLI and communicates through the CLI — no separate API key required.
 
 ## Features
 
@@ -35,7 +35,6 @@ yarn dev
 
 - Node.js 20+
 - [Claude Code CLI](https://docs.anthropic.com/en/docs/claude-code) installed and authenticated
-- Claude Max subscription
 
 ## Tech Stack
 
@@ -53,7 +52,7 @@ Browser (client-only, no SSR)
 Next.js API routes (local server)
     ↕ child_process.spawn
 Claude Code CLI (claude -p)
-    ↕ Max subscription
+    ↕ Anthropic API
 Claude Model
 ```
 
