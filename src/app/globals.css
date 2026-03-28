@@ -111,6 +111,7 @@ body {
   transition: background 0.2s, color 0.2s;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
 }
 
 /* ── Scrollbar ──────────────────────────────── */
@@ -157,4 +158,21 @@ body {
   0% { transform: translateX(-100%); }
   50% { transform: translateX(150%); }
   100% { transform: translateX(-100%); }
+}
+
+/* ── Mobile Overlay ─────────────────────────── */
+
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* Touch device: show action buttons (no hover) */
+@media (hover: none) {
+  .touch-visible { opacity: 0.6 !important; }
 }

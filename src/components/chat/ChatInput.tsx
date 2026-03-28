@@ -44,9 +44,9 @@ export function ChatInput({ onSend, onStop, onBuiltinCommand, isRunning, disable
     return () => document.removeEventListener('mousedown', handleOutsideClick)
   }, [picker])
 
-  // Refocus on idle
+  // Refocus on idle (skip on touch devices to avoid virtual keyboard popup)
   useEffect(() => {
-    if (isRunning === false) {
+    if (isRunning === false && window.matchMedia('(hover: hover)').matches) {
       textareaRef.current?.focus()
     }
   }, [isRunning])
@@ -99,7 +99,7 @@ export function ChatInput({ onSend, onStop, onBuiltinCommand, isRunning, disable
   const canSend = value.trim() !== '' && disabled !== true
 
   return (
-    <div className="px-4 pb-4 pt-1 relative" ref={containerRef}>
+    <div className="px-2 sm:px-4 pb-4 pt-1 relative" ref={containerRef}>
       {picker.shouldShowPicker && (
         <CommandPicker
           items={picker.pickerItems}

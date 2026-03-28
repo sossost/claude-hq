@@ -47,7 +47,7 @@ export function AgentCatalog({ agents }: AgentCatalogProps) {
               </span>
               <div className="flex-1 h-px" style={{ background: 'var(--border)' }} />
             </div>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {group.map((agent) => (
                 <AgentCard key={agent.name} agent={agent} />
               ))}

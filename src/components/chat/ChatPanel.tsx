@@ -34,7 +34,7 @@ export function ChatPanel({ messages, isRunning, hasProject, projectName, settin
             background: 'linear-gradient(to bottom, transparent, var(--background))',
           }}
         />
-        <div className="px-4 pt-2 pb-1">
+        <div className="px-2 sm:px-4 pt-2 pb-1">
           <SettingsPanel settings={settings} activeModel={activeModel} activePermissionMode={activePermissionMode} claudeDefaults={claudeDefaults} onChange={onSettingsChange} />
         </div>
         <ChatInput onSend={onSend} onStop={onStop} onBuiltinCommand={onBuiltinCommand} isRunning={isRunning} disabled={hasProject === false} commands={commands} />

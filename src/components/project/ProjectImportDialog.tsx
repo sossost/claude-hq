@@ -62,7 +62,7 @@ export function ProjectImportDialog({ onImport, onClose }: ProjectImportDialogPr
       aria-labelledby="import-dialog-title"
     >
       <div
-        className="w-full max-w-md rounded-xl shadow-2xl overflow-hidden"
+        className="w-full max-w-[calc(100vw-2rem)] sm:max-w-md rounded-xl shadow-2xl overflow-hidden mx-4"
         style={{ background: 'var(--background)', border: '1px solid var(--border)' }}
       >
         <div
@@ -89,7 +89,7 @@ export function ProjectImportDialog({ onImport, onClose }: ProjectImportDialogPr
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search projects..."
-            autoFocus
+            autoFocus={typeof window !== 'undefined' && window.matchMedia('(hover: hover) and (pointer: fine)').matches}
             className="w-full rounded-md px-3 py-2 text-sm focus:outline-none"
             style={{
               background: 'var(--surface)',
@@ -99,7 +99,7 @@ export function ProjectImportDialog({ onImport, onClose }: ProjectImportDialogPr
           />
         </div>
 
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto" style={{ overscrollBehavior: 'contain' }}>
           {isLoading && (
             <div className="px-4 py-8 text-center text-xs" style={{ color: 'var(--content-muted)' }}>
               Loading...

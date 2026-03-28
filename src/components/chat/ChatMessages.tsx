@@ -38,7 +38,7 @@ export function ChatMessages({ messages, isRunning, projectName }: ChatMessagesP
           && index === lastAssistantIndex
 
         return (
-          <div key={msg.id} className="mx-auto max-w-3xl px-4">
+          <div key={msg.id} className="mx-auto max-w-3xl px-2 sm:px-4">
             {msg.role === 'user' && <UserBubble message={msg} />}
             {msg.role === 'assistant' && (
               <AssistantBubble message={msg} isStreaming={isLastAssistant} />
@@ -51,7 +51,7 @@ export function ChatMessages({ messages, isRunning, projectName }: ChatMessagesP
       })}
 
       {isRunning && (
-        <div className="mx-auto max-w-3xl px-4">
+        <div className="mx-auto max-w-3xl px-2 sm:px-4">
           <RunningIndicator />
         </div>
       )}
