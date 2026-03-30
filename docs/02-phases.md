@@ -57,6 +57,13 @@
 - [x] Pinch-to-zoom disabled on mobile viewport
 - [x] Tool bubbles redesigned as compact log-style lines
 
+## Phase 3.6: Mobile & Remote UX
+
+**Core**: Make Claude HQ reliable when used remotely or from a mobile device.
+
+- [ ] Recover session after SSE disconnect on mobile background (#5)
+- [ ] Browser notification on task completion (#6)
+
 ## Phase 4: Scheduling & Automation
 
 **Core**: Set up and manage recurring tasks from the UI.
