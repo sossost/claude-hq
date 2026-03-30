@@ -17,6 +17,9 @@
 # dependencies
 node_modules
 
+# claude local config (agents, commands — maintainer-only)
+.claude/
+
 # misc
 .DS_Store
 *.pem
