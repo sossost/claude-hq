@@ -4,6 +4,12 @@ about: Suggest an idea or improvement
 labels: enhancement
 ---
 
+## Goal Alignment
+
+> Claude HQ's goal: a visual control center for Claude Code power users — accessible from anywhere.
+
+Does this feature serve that goal? How?
+
 ## What problem does this solve?
 
 A clear description of the problem or limitation you're running into.
