@@ -31,6 +31,10 @@ yarn dev
 # Open http://localhost:3100
 ```
 
+## Remote Access
+
+Claude HQ runs locally by default. To access it from other devices (e.g. checking progress from your phone), use a private network tool like [Tailscale](https://tailscale.com) — no additional configuration required, just expose port 3100.
+
 ## Requirements
 
 - Node.js 20+
