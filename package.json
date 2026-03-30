@@ -1,7 +1,25 @@
 {
   "name": "claude-hq",
   "version": "0.1.0",
-  "private": true,
+  "description": "A local web dashboard for Claude Code — visual chat, session management, and agent monitoring.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sossost/claude-hq.git"
+  },
+  "homepage": "https://github.com/sossost/claude-hq#readme",
+  "bugs": {
+    "url": "https://github.com/sossost/claude-hq/issues"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "anthropic",
+    "ai",
+    "dashboard",
+    "cli",
+    "local-tool"
+  ],
   "packageManager": "yarn@4.6.0",
   "scripts": {
     "dev": "next dev --port 3100",

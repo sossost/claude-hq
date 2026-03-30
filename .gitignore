@@ -23,3 +23,4 @@ node_modules
 .env*
 *.local.md
 docs/features/
+tsconfig.tsbuildinfo

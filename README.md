@@ -24,7 +24,7 @@ Claude HQ wraps the Claude Code CLI (`claude -p`) in a visual web interface. Ins
 ## Quick Start
 
 ```bash
-git clone https://github.com/your-username/claude-hq.git
+git clone https://github.com/sossost/claude-hq.git
 cd claude-hq
 yarn install
 yarn dev
