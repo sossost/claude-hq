@@ -3,8 +3,20 @@
 import { useState, useCallback, useRef } from 'react'
 import type { ChatMessage, Project, PersistedSession, SessionSettings, SendOptions } from '@/types/events'
 
+function isValidPersistedSession(v: unknown): v is PersistedSession {
+  if (v == null || typeof v !== 'object') return false
+  const s = v as Record<string, unknown>
+  return (
+    typeof s.id === 'string' &&
+    (typeof s.claudeSessionId === 'string' || s.claudeSessionId === null) &&
+    Array.isArray(s.messages)
+  )
+}
+
 const ASSISTANT_CHUNK_MERGE_WINDOW_MS = 500
 const SSE_DATA_PREFIX = 'data: '
+const RECOVERY_POLL_INTERVAL_MS = 2_000
+const RECOVERY_TIMEOUT_MS = 5 * 60 * 1_000
 
 interface UseChatOptions {
   project: Project | null
@@ -15,6 +27,7 @@ interface UseChatOptions {
 interface UseChatReturn {
   messages: ChatMessage[]
   isRunning: boolean
+  isRecovering: boolean
   sessionId: string | null
   claudeSessionId: string | null
   activeModel: string | null
@@ -29,11 +42,13 @@ interface UseChatReturn {
 export function useChat({ project, settings, onSessionCreated }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isRunning, setIsRunning] = useState(false)
+  const [isRecovering, setIsRecovering] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [claudeSessionId, setClaudeSessionId] = useState<string | null>(null)
   const [activeModel, setActiveModel] = useState<string | null>(null)
   const [activePermissionMode, setActivePermissionMode] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const ensureSession = useCallback(async (): Promise<string> => {
     if (sessionId != null) return sessionId
@@ -71,8 +86,11 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
     const abort = new AbortController()
     abortRef.current = abort
 
+    // Hoisted so catch can access it for recovery
+    let persistId: string | null = null
+
     try {
-      const persistId = await ensureSession()
+      persistId = await ensureSession()
 
       // Save user message to server
       await fetch('/api/sessions', {
@@ -172,7 +190,64 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
         }
       }
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
+      if ((err as Error).name === 'AbortError') return
+
+      if (persistId != null) {
+        // SSE dropped but the claude process may still be running on the server.
+        // Enter recovery mode: poll the session endpoint until messages appear.
+        const recoverySessionId = persistId
+        const knownCount = messages.length + 1 // +1 for user message already persisted
+        const disconnectMsgId = `disconnect-${Date.now()}`
+        const recoveryStartTime = Date.now()
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: disconnectMsgId,
+            role: 'system' as const,
+            content: 'Connection lost. Checking for completed response...',
+            timestamp: Date.now(),
+          },
+        ])
+        setIsRecovering(true)
+
+        const poll = () => {
+          if (Date.now() - recoveryStartTime > RECOVERY_TIMEOUT_MS) {
+            setIsRecovering(false)
+            setMessages((prev) => [
+              ...prev.filter((m) => m.id !== disconnectMsgId),
+              {
+                id: `recovery-failed-${Date.now()}`,
+                role: 'system' as const,
+                content: 'Recovery timed out. Check the session list to see if a response was saved.',
+                timestamp: Date.now(),
+              },
+            ])
+            return
+          }
+
+          fetch(`/api/sessions?id=${encodeURIComponent(recoverySessionId)}`)
+            .then((res) => res.json())
+            .then((raw: unknown) => {
+              const data = raw != null && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
+              const dataField = data?.data != null && typeof data.data === 'object' ? (data.data as Record<string, unknown>) : null
+              const sessionField = dataField?.session
+              if (isValidPersistedSession(sessionField) && sessionField.messages.length > knownCount) {
+                setSessionId(sessionField.id)
+                setClaudeSessionId(sessionField.claudeSessionId)
+                setMessages(sessionField.messages)
+                setIsRecovering(false)
+              } else {
+                pollingRef.current = setTimeout(poll, RECOVERY_POLL_INTERVAL_MS)
+              }
+            })
+            .catch(() => {
+              pollingRef.current = setTimeout(poll, RECOVERY_POLL_INTERVAL_MS)
+            })
+        }
+
+        pollingRef.current = setTimeout(poll, RECOVERY_POLL_INTERVAL_MS)
+      } else {
         setMessages((prev) => [
           ...prev,
           {
@@ -187,7 +262,7 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
       setIsRunning(false)
       abortRef.current = null
     }
-  }, [project, claudeSessionId, ensureSession, settings])
+  }, [project, claudeSessionId, ensureSession, settings, messages.length])
 
   const stop = useCallback(() => {
     abortRef.current?.abort()
@@ -195,6 +270,11 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
   }, [])
 
   const clear = useCallback(() => {
+    if (pollingRef.current != null) {
+      clearTimeout(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsRecovering(false)
     setMessages([])
     setSessionId(null)
     setClaudeSessionId(null)
@@ -219,10 +299,15 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
   }, [sessionId])
 
   const loadSession = useCallback((session: PersistedSession) => {
+    if (pollingRef.current != null) {
+      clearTimeout(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsRecovering(false)
     setSessionId(session.id)
     setClaudeSessionId(session.claudeSessionId)
     setMessages(session.messages)
   }, [])
 
-  return { messages, isRunning, sessionId, claudeSessionId, activeModel, activePermissionMode, send, stop, clear, clearMessages, loadSession }
+  return { messages, isRunning, isRecovering, sessionId, claudeSessionId, activeModel, activePermissionMode, send, stop, clear, clearMessages, loadSession }
 }
