@@ -1,16 +1,20 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { ChatMessage, Project, PersistedSession, SessionSettings, SendOptions } from '@/types/events'
 
 function isValidPersistedSession(v: unknown): v is PersistedSession {
-  if (v == null || typeof v !== 'object') return false
+  if (v == null || typeof v !== 'object' || Array.isArray(v)) return false
   const s = v as Record<string, unknown>
   return (
     typeof s.id === 'string' &&
     (typeof s.claudeSessionId === 'string' || s.claudeSessionId === null) &&
     Array.isArray(s.messages)
   )
+}
+
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err))
 }
 
 const ASSISTANT_CHUNK_MERGE_WINDOW_MS = 500
@@ -49,6 +53,7 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
   const [activePermissionMode, setActivePermissionMode] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const messagesLengthRef = useRef(0)
 
   const ensureSession = useCallback(async (): Promise<string> => {
     if (sessionId != null) return sessionId
@@ -80,7 +85,11 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
       content: options?.displayContent ?? prompt,
       timestamp: Date.now(),
     }
-    setMessages((prev) => [...prev, userMsg])
+    setMessages((prev) => {
+      const next = [...prev, userMsg]
+      messagesLengthRef.current = next.length
+      return next
+    })
     setIsRunning(true)
 
     const abort = new AbortController()
@@ -190,13 +199,13 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
         }
       }
     } catch (err) {
-      if ((err as Error).name === 'AbortError') return
+      if (toError(err).name === 'AbortError') return
 
       if (persistId != null) {
         // SSE dropped but the claude process may still be running on the server.
         // Enter recovery mode: poll the session endpoint until messages appear.
         const recoverySessionId = persistId
-        const knownCount = messages.length + 1 // +1 for user message already persisted
+        const knownCount = messagesLengthRef.current // includes user message already added
         const disconnectMsgId = `disconnect-${Date.now()}`
         const recoveryStartTime = Date.now()
 
@@ -253,7 +262,7 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
           {
             id: `err-${Date.now()}`,
             role: 'system' as const,
-            content: `Error: ${(err as Error).message}`,
+            content: `Error: ${toError(err).message}`,
             timestamp: Date.now(),
           },
         ])
@@ -262,10 +271,15 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
       setIsRunning(false)
       abortRef.current = null
     }
-  }, [project, claudeSessionId, ensureSession, settings, messages.length])
+  }, [project, claudeSessionId, ensureSession, settings])
 
   const stop = useCallback(() => {
     abortRef.current?.abort()
+    if (pollingRef.current != null) {
+      clearTimeout(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsRecovering(false)
     setIsRunning(false)
   }, [])
 
@@ -283,6 +297,11 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
   }, [])
 
   const clearMessages = useCallback(() => {
+    if (pollingRef.current != null) {
+      clearTimeout(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsRecovering(false)
     setMessages([])
     setClaudeSessionId(null)
 
@@ -307,6 +326,15 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
     setSessionId(session.id)
     setClaudeSessionId(session.claudeSessionId)
     setMessages(session.messages)
+  }, [])
+
+  // Cancel polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current != null) {
+        clearTimeout(pollingRef.current)
+      }
+    }
   }, [])
 
   return { messages, isRunning, isRecovering, sessionId, claudeSessionId, activeModel, activePermissionMode, send, stop, clear, clearMessages, loadSession }
