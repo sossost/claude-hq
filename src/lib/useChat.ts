@@ -1,10 +1,26 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 import type { ChatMessage, Project, PersistedSession, SessionSettings, SendOptions } from '@/types/events'
+
+function isValidPersistedSession(v: unknown): v is PersistedSession {
+  if (v == null || typeof v !== 'object' || Array.isArray(v)) return false
+  const s = v as Record<string, unknown>
+  return (
+    typeof s.id === 'string' &&
+    (typeof s.claudeSessionId === 'string' || s.claudeSessionId === null) &&
+    Array.isArray(s.messages)
+  )
+}
+
+function toError(err: unknown): Error {
+  return err instanceof Error ? err : new Error(String(err))
+}
 
 const ASSISTANT_CHUNK_MERGE_WINDOW_MS = 500
 const SSE_DATA_PREFIX = 'data: '
+const RECOVERY_POLL_INTERVAL_MS = 2_000
+const RECOVERY_TIMEOUT_MS = 5 * 60 * 1_000
 
 interface UseChatOptions {
   project: Project | null
@@ -15,6 +31,7 @@ interface UseChatOptions {
 interface UseChatReturn {
   messages: ChatMessage[]
   isRunning: boolean
+  isRecovering: boolean
   sessionId: string | null
   claudeSessionId: string | null
   activeModel: string | null
@@ -29,11 +46,14 @@ interface UseChatReturn {
 export function useChat({ project, settings, onSessionCreated }: UseChatOptions): UseChatReturn {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [isRunning, setIsRunning] = useState(false)
+  const [isRecovering, setIsRecovering] = useState(false)
   const [sessionId, setSessionId] = useState<string | null>(null)
   const [claudeSessionId, setClaudeSessionId] = useState<string | null>(null)
   const [activeModel, setActiveModel] = useState<string | null>(null)
   const [activePermissionMode, setActivePermissionMode] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const messagesLengthRef = useRef(0)
 
   const ensureSession = useCallback(async (): Promise<string> => {
     if (sessionId != null) return sessionId
@@ -65,14 +85,21 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
       content: options?.displayContent ?? prompt,
       timestamp: Date.now(),
     }
-    setMessages((prev) => [...prev, userMsg])
+    setMessages((prev) => {
+      const next = [...prev, userMsg]
+      messagesLengthRef.current = next.length
+      return next
+    })
     setIsRunning(true)
 
     const abort = new AbortController()
     abortRef.current = abort
 
+    // Hoisted so catch can access it for recovery
+    let persistId: string | null = null
+
     try {
-      const persistId = await ensureSession()
+      persistId = await ensureSession()
 
       // Save user message to server
       await fetch('/api/sessions', {
@@ -172,13 +199,70 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
         }
       }
     } catch (err) {
-      if ((err as Error).name !== 'AbortError') {
+      if (toError(err).name === 'AbortError') return
+
+      if (persistId != null) {
+        // SSE dropped but the claude process may still be running on the server.
+        // Enter recovery mode: poll the session endpoint until messages appear.
+        const recoverySessionId = persistId
+        const knownCount = messagesLengthRef.current // includes user message already added
+        const disconnectMsgId = `disconnect-${Date.now()}`
+        const recoveryStartTime = Date.now()
+
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: disconnectMsgId,
+            role: 'system' as const,
+            content: 'Connection lost. Checking for completed response...',
+            timestamp: Date.now(),
+          },
+        ])
+        setIsRecovering(true)
+
+        const poll = () => {
+          if (Date.now() - recoveryStartTime > RECOVERY_TIMEOUT_MS) {
+            setIsRecovering(false)
+            setMessages((prev) => [
+              ...prev.filter((m) => m.id !== disconnectMsgId),
+              {
+                id: `recovery-failed-${Date.now()}`,
+                role: 'system' as const,
+                content: 'Recovery timed out. Check the session list to see if a response was saved.',
+                timestamp: Date.now(),
+              },
+            ])
+            return
+          }
+
+          fetch(`/api/sessions?id=${encodeURIComponent(recoverySessionId)}`)
+            .then((res) => res.json())
+            .then((raw: unknown) => {
+              const data = raw != null && typeof raw === 'object' ? (raw as Record<string, unknown>) : null
+              const dataField = data?.data != null && typeof data.data === 'object' ? (data.data as Record<string, unknown>) : null
+              const sessionField = dataField?.session
+              if (isValidPersistedSession(sessionField) && sessionField.messages.length > knownCount) {
+                setSessionId(sessionField.id)
+                setClaudeSessionId(sessionField.claudeSessionId)
+                setMessages(sessionField.messages)
+                setIsRecovering(false)
+              } else {
+                pollingRef.current = setTimeout(poll, RECOVERY_POLL_INTERVAL_MS)
+              }
+            })
+            .catch(() => {
+              pollingRef.current = setTimeout(poll, RECOVERY_POLL_INTERVAL_MS)
+            })
+        }
+
+        pollingRef.current = setTimeout(poll, RECOVERY_POLL_INTERVAL_MS)
+      } else {
         setMessages((prev) => [
           ...prev,
           {
             id: `err-${Date.now()}`,
             role: 'system' as const,
-            content: `Error: ${(err as Error).message}`,
+            content: `Error: ${toError(err).message}`,
             timestamp: Date.now(),
           },
         ])
@@ -191,10 +275,20 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
 
   const stop = useCallback(() => {
     abortRef.current?.abort()
+    if (pollingRef.current != null) {
+      clearTimeout(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsRecovering(false)
     setIsRunning(false)
   }, [])
 
   const clear = useCallback(() => {
+    if (pollingRef.current != null) {
+      clearTimeout(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsRecovering(false)
     setMessages([])
     setSessionId(null)
     setClaudeSessionId(null)
@@ -203,6 +297,11 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
   }, [])
 
   const clearMessages = useCallback(() => {
+    if (pollingRef.current != null) {
+      clearTimeout(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsRecovering(false)
     setMessages([])
     setClaudeSessionId(null)
 
@@ -219,10 +318,24 @@ export function useChat({ project, settings, onSessionCreated }: UseChatOptions)
   }, [sessionId])
 
   const loadSession = useCallback((session: PersistedSession) => {
+    if (pollingRef.current != null) {
+      clearTimeout(pollingRef.current)
+      pollingRef.current = null
+    }
+    setIsRecovering(false)
     setSessionId(session.id)
     setClaudeSessionId(session.claudeSessionId)
     setMessages(session.messages)
   }, [])
 
-  return { messages, isRunning, sessionId, claudeSessionId, activeModel, activePermissionMode, send, stop, clear, clearMessages, loadSession }
+  // Cancel polling on unmount
+  useEffect(() => {
+    return () => {
+      if (pollingRef.current != null) {
+        clearTimeout(pollingRef.current)
+      }
+    }
+  }, [])
+
+  return { messages, isRunning, isRecovering, sessionId, claudeSessionId, activeModel, activePermissionMode, send, stop, clear, clearMessages, loadSession }
 }
